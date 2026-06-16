@@ -1,0 +1,38 @@
+-- Seed instruments: 30+ fake/static-price companies, ASX-leaning per the
+-- "inspired by the ASX Schools trading game" framing in the product doc,
+-- with a few well-known global names mixed in for recognisability.
+
+insert into instruments (ticker, name, sector, price, day_change_pct, logo_emoji, description) values
+  ('CBA',  'Commonwealth Bank',        'Financials',       162.40,  0.8, '🏦', 'Australia''s largest bank by market cap.'),
+  ('BHP',  'BHP Group',                'Materials',         43.85, -1.2, '⛏️', 'Global mining giant — iron ore, copper, coal.'),
+  ('CSL',  'CSL Limited',              'Health Care',      289.10,  0.3, '🧬', 'Biotech company making blood plasma therapies.'),
+  ('WES',  'Wesfarmers',               'Consumer Staples',  74.20,  0.5, '🛒', 'Owns Bunnings, Kmart, Officeworks.'),
+  ('NAB',  'National Australia Bank',  'Financials',        39.60,  0.2, '🏦', 'One of Australia''s big four banks.'),
+  ('WBC',  'Westpac Banking Corp',     'Financials',        33.15,  0.1, '🏦', 'Australia''s oldest bank.'),
+  ('ANZ',  'ANZ Group',                'Financials',        30.90, -0.4, '🏦', 'Major Australian and NZ bank.'),
+  ('WOW',  'Woolworths Group',         'Consumer Staples',  35.70,  0.6, '🛒', 'Australia''s largest supermarket chain.'),
+  ('TLS',  'Telstra',                  'Communication',      4.15,  0.0, '📱', 'Australia''s biggest telecom provider.'),
+  ('RIO',  'Rio Tinto',                'Materials',        120.55, -0.9, '⛏️', 'Mining company — iron ore, aluminium, copper.'),
+  ('FMG',  'Fortescue',                'Materials',         19.80, -1.5, '⛏️', 'Iron ore producer and green energy investor.'),
+  ('GMG',  'Goodman Group',            'Real Estate',       33.40,  1.1, '🏗️', 'Industrial property and logistics group.'),
+  ('TCL',  'Transurban Group',         'Industrials',       13.25,  0.2, '🛣️', 'Toll road operator across Australia and US.'),
+  ('STO',  'Santos',                   'Energy',             7.65, -0.6, '🛢️', 'Oil and gas exploration and production.'),
+  ('WDS',  'Woodside Energy',          'Energy',            26.30, -0.8, '🛢️', 'Australia''s largest independent gas producer.'),
+  ('QBE',  'QBE Insurance',            'Financials',        20.10,  0.4, '🛡️', 'Global insurance and reinsurance group.'),
+  ('REA',  'REA Group',                'Communication',    215.00,  1.4, '🏠', 'Owns realestate.com.au.'),
+  ('COL',  'Coles Group',              'Consumer Staples',  17.85,  0.3, '🛒', 'Supermarket and retail chain.'),
+  ('ALL',  'Aristocrat Leisure',       'Consumer Disc.',    52.40,  0.7, '🎰', 'Gaming machines and digital games.'),
+  ('JHX',  'James Hardie',             'Materials',         48.90, -0.3, '🏗️', 'Building products manufacturer.'),
+  ('MQG',  'Macquarie Group',          'Financials',       212.60,  0.9, '🏦', 'Global investment bank and asset manager.'),
+  ('SHL',  'Sonic Healthcare',         'Health Care',        27.15,  0.2, '🏥', 'Medical diagnostics and pathology.'),
+  ('RMD',  'ResMed',                   'Health Care',        34.80,  0.5, '🏥', 'Sleep apnea devices and digital health.'),
+  ('XRO',  'Xero',                     'Technology',        165.20,  1.8, '💻', 'Cloud accounting software for small business.'),
+  ('WTC',  'WiseTech Global',          'Technology',        102.40,  2.1, '💻', 'Logistics software platform.'),
+  ('APT',  'Block Inc.',               'Technology',         95.30,  1.6, '💳', 'Digital payments — owns Afterpay.'),
+  ('AAPL', 'Apple Inc.',               'Technology',        212.50,  0.4, '🍎', 'Maker of the iPhone, Mac, and Apple Watch.'),
+  ('TSLA', 'Tesla Inc.',               'Consumer Disc.',    248.90, -2.3, '🚗', 'Electric vehicles and energy storage.'),
+  ('MSFT', 'Microsoft Corp.',          'Technology',        445.10,  0.6, '🖥️', 'Software, cloud computing, and Xbox.'),
+  ('NVDA', 'NVIDIA Corp.',             'Technology',        128.75,  3.2, '🎮', 'Graphics chips and AI hardware.'),
+  ('AMZN', 'Amazon.com Inc.',          'Consumer Disc.',    198.40,  0.9, '📦', 'E-commerce and cloud computing (AWS).'),
+  ('DIS',  'Walt Disney Co.',          'Communication',    112.30, -0.5, '🎬', 'Entertainment, theme parks, and streaming.')
+on conflict (ticker) do nothing;

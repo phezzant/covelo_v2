@@ -1,0 +1,67 @@
+@import "tailwindcss";
+
+:root {
+  /* Covelo design tokens */
+  --color-ink: #0F1729;        /* primary dark background — market-close navy */
+  --color-ink-light: #1B2740;  /* raised surfaces on dark bg */
+  --color-parchment: #FAF6EF;  /* primary light background / text-on-dark */
+  --color-parchment-dim: #E8E1D3;
+  --color-gain: #2BAA6E;       /* emerald — price up */
+  --color-loss: #E15A4C;       /* coral — price down */
+  --color-gold: #D4A24C;       /* partner / progression / unlock moments only */
+  --color-ink-muted: #8A93A8;  /* secondary text on dark */
+  --color-parchment-muted: #6B6456; /* secondary text on light */
+
+  --font-display: 'Fraunces', serif;
+  --font-body: 'Inter', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+}
+
+@theme inline {
+  --color-ink: var(--color-ink);
+  --color-ink-light: var(--color-ink-light);
+  --color-parchment: var(--color-parchment);
+  --color-parchment-dim: var(--color-parchment-dim);
+  --color-gain: var(--color-gain);
+  --color-loss: var(--color-loss);
+  --color-gold: var(--color-gold);
+  --color-ink-muted: var(--color-ink-muted);
+  --color-parchment-muted: var(--color-parchment-muted);
+
+  --font-display: var(--font-display);
+  --font-body: var(--font-body);
+  --font-mono: var(--font-mono);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: var(--font-body);
+}
+
+.font-display {
+  font-family: var(--font-display);
+}
+
+.font-mono {
+  font-family: var(--font-mono);
+  font-feature-settings: "tnum" 1;
+}
+
+/* Ticker animation — the signature motif */
+@keyframes ticker-scroll {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+.ticker-track {
+  animation: ticker-scroll 40s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ticker-track {
+    animation: none;
+  }
+}
