@@ -1,5 +1,6 @@
 import { getAllInstruments } from "@/lib/data/context";
 import { InstrumentBrowser } from "@/components/app/instrument-browser";
+import { OnboardingCta } from "@/components/app/onboarding-cta";
 
 export default async function ResearchPage() {
   const instruments = await getAllInstruments();
@@ -10,6 +11,12 @@ export default async function ResearchPage() {
       <p className="text-parchment-dim text-sm mb-6">
         Browse companies, see how they&apos;re performing, and make a trade.
       </p>
+
+      {/* Step 2: the only thing the child can do is reveal the Top Picks. */}
+      <OnboardingCta stepId={2} action="reveal-top-picks" dataTour="reveal-cta">
+        Show me the Top Picks
+      </OnboardingCta>
+
       <InstrumentBrowser instruments={instruments} />
     </main>
   );

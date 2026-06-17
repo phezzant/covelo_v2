@@ -7,18 +7,20 @@ export function Overlay({
   children,
   onClose,
   title,
+  hideClose,
 }: {
   children: React.ReactNode;
   onClose: () => void;
   title?: string;
+  hideClose?: boolean;
 }) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape" && !hideClose) onClose();
     };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [onClose]);
+  }, [onClose, hideClose]);
 
   return (
     <div
@@ -34,13 +36,15 @@ export function Overlay({
       >
         <div className="flex items-center justify-between mb-2">
           <div />
-          <button
-            onClick={onClose}
-            aria-label="Close"
-            className="text-ink-muted hover:text-parchment transition-colors p-1 -mr-1"
-          >
-            <X size={20} />
-          </button>
+          {!hideClose && (
+            <button
+              onClick={onClose}
+              aria-label="Close"
+              className="text-ink-muted hover:text-parchment transition-colors p-1 -mr-1"
+            >
+              <X size={20} />
+            </button>
+          )}
         </div>
         {children}
       </div>

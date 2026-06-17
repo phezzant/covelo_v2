@@ -17,7 +17,7 @@ export type TradeSide = "buy" | "sell";
 export type Profile = {
   id: string;
   role: UserRole;
-  display_name: string;
+  display_name: string | null;
   username: string | null;
   avatar_emoji: string;
   age_range: string | null;
@@ -89,7 +89,7 @@ export type Database = {
     Tables: {
       profiles: {
         Row: Profile;
-        Insert: Partial<Profile> & { id: string; role: UserRole; display_name: string };
+        Insert: Partial<Profile> & { id: string; role: UserRole };
         Update: Partial<Profile>;
         Relationships: Rel;
       };

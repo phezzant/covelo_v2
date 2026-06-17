@@ -1,6 +1,7 @@
 import { getCurrentUserContext } from "@/lib/data/context";
 import { ProfileEditor } from "@/components/app/profile-editor";
 import { LogoutButton } from "@/components/app/logout-button";
+import { RestartTourButton } from "@/components/app/restart-tour-button";
 
 export default async function ProfilePage() {
   const { profile, activePartner, partnerProfile } = await getCurrentUserContext();
@@ -30,7 +31,8 @@ export default async function ProfilePage() {
         </div>
       </div>
 
-      <div className="mt-8">
+      <div className="mt-8 flex items-center justify-between">
+        <RestartTourButton />
         <LogoutButton />
       </div>
     </main>

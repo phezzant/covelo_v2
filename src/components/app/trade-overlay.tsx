@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Overlay } from "@/components/app/overlay";
 import { PrimaryButton } from "@/components/ui/form";
+import { useOnboarding } from "@/lib/onboarding/context";
 import type { Instrument, TradeSide } from "@/types/database";
 
 const DENOMINATIONS = [50, 100, 250, 500];
@@ -18,6 +19,11 @@ export function TradeOverlay({
 }) {
   const router = useRouter();
   const supabase = createClient();
+  const { active, step, fire } = useOnboarding();
+
+  // Onboarding step 4: guide the first purchase. Lock to "buy", block closing,
+  // and only advance once a real trade goes through.
+  const guiding = active && step?.id === 4;
 
   const [side, setSide] = useState<TradeSide>("buy");
   const [amount, setAmount] = useState<number | null>(null);
@@ -26,6 +32,7 @@ export function TradeOverlay({
   const [confirmed, setConfirmed] = useState(false);
 
   const shares = amount ? amount / instrument.price : 0;
+  const effectiveSide: TradeSide = guiding ? "buy" : side;
 
   async function handleTrade() {
     if (!amount) return;
@@ -52,7 +59,7 @@ export function TradeOverlay({
       return;
     }
 
-    if (side === "buy" && amount > portfolio.cash_balance) {
+    if (effectiveSide === "buy" && amount > portfolio.cash_balance) {
       setError("You don't have enough cash for this trade.");
       setLoading(false);
       return;
@@ -61,7 +68,7 @@ export function TradeOverlay({
     const { error: tradeError } = await supabase.from("trades").insert({
       portfolio_id: portfolio.id,
       instrument_id: instrument.id,
-      side,
+      side: effectiveSide,
       quantity: shares,
       price: instrument.price,
       total: amount,
@@ -80,7 +87,7 @@ export function TradeOverlay({
       .eq("instrument_id", instrument.id)
       .maybeSingle();
 
-    if (side === "buy") {
+    if (effectiveSide === "buy") {
       if (existingHolding) {
         const newQty = existingHolding.quantity + shares;
         const newAvgCost =
@@ -102,7 +109,6 @@ export function TradeOverlay({
         .update({ cash_balance: portfolio.cash_balance - amount })
         .eq("id", portfolio.id);
     } else {
-      // sell
       if (!existingHolding || existingHolding.quantity < shares) {
         setError("You don't own enough shares to sell that much.");
         setLoading(false);
@@ -125,22 +131,29 @@ export function TradeOverlay({
     router.refresh();
   }
 
+  // While guiding, the close affordances are disabled until the buy is done.
+  const guardedClose = guiding && !confirmed ? () => {} : onClose;
+
   if (confirmed) {
     return (
-      <Overlay onClose={onClose} title="Trade confirmed">
+      <Overlay onClose={guardedClose} title="Trade confirmed">
         <div className="text-center py-4">
-          <p className="text-3xl mb-3">{side === "buy" ? "✅" : "💰"}</p>
+          <p className="text-3xl mb-3">{effectiveSide === "buy" ? "✅" : "💰"}</p>
           <h2 className="font-display text-2xl mb-2">
-            {side === "buy" ? "Bought" : "Sold"} {instrument.ticker}
+            {effectiveSide === "buy" ? "Bought" : "Sold"} {instrument.ticker}
           </h2>
           <p className="text-parchment-dim text-sm mb-6">
             {shares.toFixed(4)} shares at ${instrument.price.toFixed(2)} each.
+            {guiding ? " You're officially an investor — let's finish setting you up." : ""}
           </p>
           <button
-            onClick={onClose}
+            onClick={() => {
+              if (guiding) fire("confirm-buy");
+              onClose();
+            }}
             className="bg-gold text-ink font-semibold px-6 py-2.5 rounded-full hover:bg-gold/90 transition-colors text-sm"
           >
-            Done
+            {guiding ? "Next" : "Done"}
           </button>
         </div>
       </Overlay>
@@ -148,7 +161,19 @@ export function TradeOverlay({
   }
 
   return (
-    <Overlay onClose={onClose} title={instrument.name}>
+    <Overlay onClose={guardedClose} title={instrument.name} hideClose={guiding}>
+      {guiding && (
+        <div className="bg-gold/10 border border-gold/30 rounded-xl p-4 mb-5">
+          <p className="text-sm text-parchment leading-relaxed">
+            Would you like to buy some <span className="font-semibold">{instrument.name}</span> stock?
+            {instrument.description ? ` ${instrument.description}` : ""} Owning a small piece of a
+            company is called buying <span className="font-semibold">Shares</span>. Pick an amount
+            below, then tap Buy. If the company does well, your portfolio grows — and you can always
+            sell later.
+          </p>
+        </div>
+      )}
+
       <div className="flex items-center gap-3 mb-1">
         <span className="text-3xl">{instrument.logo_emoji}</span>
         <div>
@@ -171,7 +196,6 @@ export function TradeOverlay({
         </span>
       </div>
 
-      {/* simple illustrative sparkline placeholder — static prototype, no real chart data */}
       <svg viewBox="0 0 200 40" className="w-full h-10 mb-4" aria-hidden="true">
         <polyline
           points="0,30 20,25 40,28 60,18 80,22 100,12 120,16 140,8 160,14 180,6 200,10"
@@ -181,7 +205,7 @@ export function TradeOverlay({
         />
       </svg>
 
-      {instrument.description && (
+      {instrument.description && !guiding && (
         <p className="text-sm text-parchment-dim mb-5">{instrument.description}</p>
       )}
 
@@ -189,16 +213,17 @@ export function TradeOverlay({
         <button
           onClick={() => setSide("buy")}
           className={`flex-1 py-2 rounded-full text-sm font-semibold transition-colors ${
-            side === "buy" ? "bg-gold text-ink" : "text-parchment-dim"
+            effectiveSide === "buy" ? "bg-gold text-ink" : "text-parchment-dim"
           }`}
         >
           Buy
         </button>
         <button
-          onClick={() => setSide("sell")}
+          onClick={() => !guiding && setSide("sell")}
+          disabled={guiding}
           className={`flex-1 py-2 rounded-full text-sm font-semibold transition-colors ${
-            side === "sell" ? "bg-gold text-ink" : "text-parchment-dim"
-          }`}
+            effectiveSide === "sell" ? "bg-gold text-ink" : "text-parchment-dim"
+          } ${guiding ? "opacity-40 cursor-not-allowed" : ""}`}
         >
           Sell
         </button>
@@ -211,7 +236,7 @@ export function TradeOverlay({
       )}
 
       <p className="text-sm text-parchment-dim mb-2">
-        How much would you like to {side}?
+        How much would you like to {effectiveSide}?
       </p>
       <div className="grid grid-cols-4 gap-2 mb-5">
         {DENOMINATIONS.map((d) => (
@@ -235,9 +260,11 @@ export function TradeOverlay({
         </p>
       )}
 
-      <PrimaryButton onClick={handleTrade} disabled={!amount} loading={loading}>
-        Confirm {side}
-      </PrimaryButton>
+      <div className={guiding && amount ? "rounded-full ring-2 ring-gold/60 animate-pulse" : ""}>
+        <PrimaryButton onClick={handleTrade} disabled={!amount} loading={loading}>
+          Confirm {effectiveSide}
+        </PrimaryButton>
+      </div>
     </Overlay>
   );
 }

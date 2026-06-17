@@ -1,10 +1,8 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
-import { getOnboardingSteps } from "@/lib/onboarding/steps";
-import type { UserRole } from "@/types/database";
+import { useOnboarding } from "@/lib/onboarding/context";
 
 const TAB_PATH: Record<string, string> = {
   portfolio: "/app/portfolio",
@@ -13,160 +11,175 @@ const TAB_PATH: Record<string, string> = {
   profile: "/app/profile",
 };
 
-export function OnboardingTour({
-  role,
-  initialStep,
-  completed,
-}: {
-  role: UserRole;
-  initialStep: number;
-  completed: boolean;
-}) {
+const PAD = 10; // spotlight padding around the target element
+
+export function OnboardingTour() {
+  const { active, step, stepIndex, totalSteps, fire, skip } = useOnboarding();
   const router = useRouter();
   const pathname = usePathname();
-  const supabase = createClient();
 
-  const steps = getOnboardingSteps(role);
-  const [stepIndex, setStepIndex] = useState(() => {
-    const idx = steps.findIndex((s) => s.id === initialStep);
-    return idx >= 0 ? idx : 0;
-  });
-  const [dismissed, setDismissed] = useState(completed);
   const [rect, setRect] = useState<DOMRect | null>(null);
+  const [anchorMissing, setAnchorMissing] = useState(false);
+  const missingTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const step = steps[stepIndex];
-
-  // navigate to the right tab for the current step
+  // Route to the tab this step belongs to.
   useEffect(() => {
-    if (dismissed || !step) return;
-    const targetPath = TAB_PATH[step.tab];
-    if (targetPath && pathname !== targetPath) {
-      router.push(targetPath);
-    }
-  }, [step, pathname, dismissed, router]);
+    if (!active || !step) return;
+    const target = TAB_PATH[step.tab];
+    if (target && pathname !== target) router.push(target);
+  }, [active, step, pathname, router]);
 
-  // find and track the spotlighted element's position
-  const updateRect = useCallback(() => {
-    if (!step?.targetSelector) {
-      setRect(null);
+  // Track the spotlight target's position. Elements mount asynchronously after
+  // navigation, so poll briefly until it appears, then keep it in sync.
+  useEffect(() => {
+    if (!active || !step || step.inOverlay || !step.anchor) {
+      if (missingTimer.current) clearTimeout(missingTimer.current);
       return;
     }
-    const el = document.querySelector(step.targetSelector);
-    if (el) {
-      setRect(el.getBoundingClientRect());
-    } else {
-      setRect(null);
-    }
-  }, [step]);
+    if (missingTimer.current) clearTimeout(missingTimer.current);
+    // anti-soft-lock: if the target never appears, reveal a quiet fallback.
+    missingTimer.current = setTimeout(() => setAnchorMissing(true), 6000);
 
-  useEffect(() => {
-    if (dismissed) return;
-    // small delay to let the page render after navigation
-    const t = setTimeout(updateRect, 150);
-    window.addEventListener("resize", updateRect);
-    window.addEventListener("scroll", updateRect, true);
-    return () => {
-      clearTimeout(t);
-      window.removeEventListener("resize", updateRect);
-      window.removeEventListener("scroll", updateRect, true);
+    let raf = 0;
+    let polls = 0;
+    const measure = () => {
+      const el = step.anchor ? document.querySelector(step.anchor) : null;
+      if (el) {
+        setRect(el.getBoundingClientRect());
+        setAnchorMissing(false);
+        if (missingTimer.current) clearTimeout(missingTimer.current);
+      } else if (polls < 60) {
+        polls += 1;
+        raf = requestAnimationFrame(measure);
+      }
     };
-  }, [updateRect, dismissed, pathname]);
+    measure();
 
-  async function persistStep(newStepId: number, isComplete: boolean) {
-    const { data: userData } = await supabase.auth.getUser();
-    const user = userData.user;
-    if (!user) return;
-    await supabase
-      .from("profiles")
-      .update({
-        onboarding_step: newStepId,
-        onboarding_completed: isComplete,
-      })
-      .eq("id", user.id);
-  }
+    const onMove = () => {
+      const el = step.anchor ? document.querySelector(step.anchor) : null;
+      if (el) setRect(el.getBoundingClientRect());
+    };
+    window.addEventListener("resize", onMove);
+    window.addEventListener("scroll", onMove, true);
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener("resize", onMove);
+      window.removeEventListener("scroll", onMove, true);
+      if (missingTimer.current) clearTimeout(missingTimer.current);
+    };
+  }, [active, step, pathname]);
 
-  async function handleNext() {
-    if (stepIndex >= steps.length - 1) {
-      setDismissed(true);
-      await persistStep(step.id, true);
-      router.refresh();
-      return;
-    }
-    const nextIndex = stepIndex + 1;
-    setStepIndex(nextIndex);
-    await persistStep(steps[nextIndex].id, false);
-  }
+  if (!active || !step || step.inOverlay) return null;
 
-  async function handleSkip() {
-    setDismissed(true);
-    await persistStep(step?.id ?? steps[steps.length - 1].id, true);
-    router.refresh();
-  }
+  const hasHole = !!rect && !!step.anchor && !step.inOverlay;
+  const placement: "top" | "bottom" | "center" = !rect
+    ? "center"
+    : rect.top + rect.height / 2 < window.innerHeight / 2
+      ? "bottom"
+      : "top";
 
-  if (dismissed || !step) return null;
+  // Spotlight hole geometry
+  const hx = rect ? rect.left - PAD : 0;
+  const hy = rect ? rect.top - PAD : 0;
+  const hw = rect ? rect.width + PAD * 2 : 0;
+  const hh = rect ? rect.height + PAD * 2 : 0;
+
+  const dim = "rgba(15, 23, 41, 0.82)";
+  const panel = (style: React.CSSProperties, key: string) => (
+    <div
+      key={key}
+      onClick={(e) => e.stopPropagation()}
+      style={{ position: "fixed", background: dim, ...style }}
+      className="z-40"
+    />
+  );
+
+  const cardPositionClass =
+    placement === "top"
+      ? "top-6 sm:top-10"
+      : placement === "bottom"
+        ? "bottom-6 sm:bottom-10"
+        : "top-1/2 -translate-y-1/2";
 
   return (
     <div className="fixed inset-0 z-40 pointer-events-none">
-      {/* dimmed backdrop with a cut-out around the spotlighted element */}
-      <svg className="absolute inset-0 w-full h-full pointer-events-auto" onClick={(e) => e.stopPropagation()}>
-        <defs>
-          <mask id="spotlight-mask">
-            <rect width="100%" height="100%" fill="white" />
-            {rect && (
-              <rect
-                x={rect.left - 8}
-                y={rect.top - 8}
-                width={rect.width + 16}
-                height={rect.height + 16}
-                rx={16}
-                fill="black"
-              />
-            )}
-          </mask>
-        </defs>
-        <rect
-          width="100%"
-          height="100%"
-          fill="rgba(15, 23, 41, 0.78)"
-          mask="url(#spotlight-mask)"
-        />
-        {rect && (
-          <rect
-            x={rect.left - 8}
-            y={rect.top - 8}
-            width={rect.width + 16}
-            height={rect.height + 16}
-            rx={16}
-            fill="none"
-            stroke="var(--color-gold)"
-            strokeWidth="2"
+      {/* Dim backdrop. With a hole, four panels surround it so the spotlit
+          element stays fully clickable; without one, a single dim layer. */}
+      {hasHole ? (
+        <>
+          {panel({ top: 0, left: 0, right: 0, height: Math.max(hy, 0), pointerEvents: "auto" }, "t")}
+          {panel(
+            { top: hy + hh, left: 0, right: 0, bottom: 0, pointerEvents: "auto" },
+            "b"
+          )}
+          {panel(
+            { top: Math.max(hy, 0), left: 0, width: Math.max(hx, 0), height: hh, pointerEvents: "auto" },
+            "l"
+          )}
+          {panel(
+            { top: Math.max(hy, 0), left: hx + hw, right: 0, height: hh, pointerEvents: "auto" },
+            "r"
+          )}
+          {/* glow ring around the spotlight */}
+          <div
+            className="z-40 pointer-events-none rounded-2xl"
+            style={{
+              position: "fixed",
+              top: hy,
+              left: hx,
+              width: hw,
+              height: hh,
+              border: "2px solid var(--color-gold)",
+              boxShadow:
+                "0 0 0 9999px rgba(0,0,0,0), 0 0 24px 4px var(--color-gold), inset 0 0 0 1px rgba(255,255,255,0.06)",
+            }}
           />
-        )}
-      </svg>
+        </>
+      ) : (
+        <div
+          onClick={(e) => e.stopPropagation()}
+          className="absolute inset-0 z-40 pointer-events-auto"
+          style={{ background: dim }}
+        />
+      )}
 
+      {/* Tutorial text card */}
       <div
-        className="absolute inset-x-4 bottom-24 sm:bottom-8 sm:inset-x-auto sm:right-8 sm:max-w-sm bg-ink-light border border-gold/30 rounded-2xl p-5 shadow-2xl pointer-events-auto"
+        className={`fixed inset-x-4 sm:inset-x-0 sm:mx-auto sm:max-w-sm ${cardPositionClass} bg-ink-light border border-gold/30 rounded-2xl p-5 shadow-2xl pointer-events-auto z-40`}
         role="dialog"
-        aria-modal="true"
-        aria-label="Onboarding tutorial"
+        aria-modal="false"
+        aria-label="Getting started"
       >
         <p className="font-mono text-xs text-gold mb-2">
-          Step {stepIndex + 1} of {steps.length}
+          Step {stepIndex + 1} of {totalSteps}
         </p>
         <h3 className="font-display text-xl mb-1.5">{step.title}</h3>
         <p className="text-sm text-parchment-dim mb-4 leading-relaxed">{step.body}</p>
-        <div className="flex items-center justify-between">
+
+        {step.showContinue && (
           <button
-            onClick={handleSkip}
+            onClick={() => fire("continue")}
+            className="bg-gold text-ink font-semibold px-5 py-2 rounded-full hover:bg-gold/90 transition-colors text-sm w-full"
+          >
+            {stepIndex >= totalSteps - 1 ? "Start exploring" : "Continue"}
+          </button>
+        )}
+
+        {!step.showContinue && anchorMissing && (
+          <button
+            onClick={() => fire(step.requiredAction)}
+            className="block text-xs text-ink-muted hover:text-parchment-dim transition-colors underline mb-2"
+          >
+            Skip this step →
+          </button>
+        )}
+
+        <div className="mt-3 pt-3 border-t border-parchment/10 flex justify-center">
+          <button
+            onClick={skip}
             className="text-xs text-ink-muted hover:text-parchment-dim transition-colors"
           >
             Skip tour
-          </button>
-          <button
-            onClick={handleNext}
-            className="bg-gold text-ink font-semibold px-5 py-2 rounded-full hover:bg-gold/90 transition-colors text-sm"
-          >
-            {stepIndex >= steps.length - 1 ? "Done" : "Next"}
           </button>
         </div>
       </div>

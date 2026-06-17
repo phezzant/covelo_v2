@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Overlay } from "@/components/app/overlay";
 import { FormField, PrimaryButton } from "@/components/ui/form";
+import { useOnboarding } from "@/lib/onboarding/context";
 import type { UserRole } from "@/types/database";
 
 export function InvitePartnerOverlay({
@@ -18,6 +19,8 @@ export function InvitePartnerOverlay({
 }) {
   const router = useRouter();
   const supabase = createClient();
+  const { active, step, fire } = useOnboarding();
+  const guiding = active && step?.id === 6;
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -67,6 +70,7 @@ export function InvitePartnerOverlay({
 
     setSent(true);
     router.refresh();
+    if (guiding) fire("send-invite");
   }
 
   if (sent) {
@@ -91,7 +95,7 @@ export function InvitePartnerOverlay({
   }
 
   return (
-    <Overlay onClose={onClose} title="Invite your Investment Partner">
+    <Overlay onClose={guiding ? () => {} : onClose} hideClose={guiding} title="Invite your Investment Partner">
       <h2 className="font-display text-2xl mb-1">
         {isChild ? "Invite your Investment Partner" : "Invite your child"}
       </h2>

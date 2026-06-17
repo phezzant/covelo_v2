@@ -35,6 +35,15 @@ export async function getCurrentUserContext() {
     .eq("profile_id", user.id)
     .single();
 
+  let holdingsCount = 0;
+  if (portfolio) {
+    const { count } = await supabase
+      .from("holdings")
+      .select("*", { count: "exact", head: true })
+      .eq("portfolio_id", portfolio.id);
+    holdingsCount = count ?? 0;
+  }
+
   // active or pending partner row, whichever side this user is on
   const { data: partnerRows } = await supabase
     .from("journey_partner")
@@ -63,6 +72,7 @@ export async function getCurrentUserContext() {
     activePartner,
     pendingPartner,
     partnerProfile,
+    holdingsCount,
   };
 }
 

@@ -2,6 +2,7 @@ import { getCurrentUserContext, getHoldingsWithInstruments } from "@/lib/data/co
 import { PortfolioSummary } from "@/components/app/portfolio-summary";
 import { HoldingsList } from "@/components/app/holdings-list";
 import { PartnerBanner } from "@/components/app/partner-banner";
+import { OnboardingCta } from "@/components/app/onboarding-cta";
 
 export default async function PortfolioPage() {
   const { profile, portfolio, activePartner, pendingPartner, partnerProfile } =
@@ -15,27 +16,36 @@ export default async function PortfolioPage() {
   const totalValue = stockValue + cashBalance;
   const totalPL = stockValue - costBasis;
 
+  const firstName = profile.display_name?.trim().split(" ")[0];
+
   return (
     <main className="max-w-3xl mx-auto px-4 sm:px-6 py-6">
       <PartnerBanner
         role={profile.role}
-        displayName={profile.display_name}
+        displayName={profile.display_name ?? ""}
         activePartner={activePartner}
         pendingPartner={pendingPartner}
         partnerName={partnerProfile?.display_name}
       />
 
       <h1 className="font-display text-3xl mt-6 mb-1">
-        Welcome back, {profile.display_name.split(" ")[0]}
+        {firstName ? `Welcome back, ${firstName}` : "Welcome to Covelo"}
       </h1>
       <p className="text-parchment-dim text-sm mb-6">Here&apos;s how your portfolio&apos;s doing.</p>
 
-      <PortfolioSummary
-        totalValue={totalValue}
-        stockValue={stockValue}
-        cashBalance={cashBalance}
-        totalPL={totalPL}
-      />
+      {/* Spotlight region for onboarding step 1: the summary stays bright and the
+          injected CTA below it is the only clickable control. */}
+      <div data-tour="portfolio-spotlight">
+        <PortfolioSummary
+          totalValue={totalValue}
+          stockValue={stockValue}
+          cashBalance={cashBalance}
+          totalPL={totalPL}
+        />
+        <OnboardingCta stepId={1} action="goto-research">
+          Research &amp; Purchase stocks
+        </OnboardingCta>
+      </div>
 
       <h2 className="font-display text-xl mt-10 mb-4">Your holdings</h2>
       <HoldingsList holdings={holdings} />

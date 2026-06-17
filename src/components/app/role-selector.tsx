@@ -3,13 +3,11 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { FormField } from "@/components/ui/form";
 
 export function RoleSelector() {
   const router = useRouter();
   const supabase = createClient();
 
-  const [name, setName] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -26,10 +24,11 @@ export function RoleSelector() {
       return;
     }
 
+    // Name is collected later, during the profile step of onboarding — so we
+    // create the profile without a display_name (the column is nullable).
     const { error: profileError } = await supabase.from("profiles").insert({
       id: user.id,
       role,
-      display_name: name,
     });
 
     if (profileError) {
@@ -40,8 +39,7 @@ export function RoleSelector() {
 
     await supabase.from("portfolios").insert({ profile_id: user.id });
 
-    // Claim any pending invite sent to this email address — see
-    // Account Linking doc, Flow A/B resolution on signup.
+    // Claim any pending invite sent to this email address.
     if (user.email) {
       const matchColumn = role === "adult" ? "adult_id" : "child_id";
       const { data: pendingInvite } = await supabase
@@ -78,18 +76,9 @@ export function RoleSelector() {
           {error}
         </p>
       )}
-      <FormField
-        label="What should we call you?"
-        id="name"
-        type="text"
-        placeholder="Your name"
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-        required
-      />
-      <div className="grid grid-cols-2 gap-3 mt-2">
+      <div className="grid grid-cols-2 gap-3">
         <button
-          disabled={loading || !name}
+          disabled={loading}
           onClick={() => handleRoleSubmit("child")}
           className="flex flex-col items-center gap-2 border border-parchment/15 rounded-xl py-6 hover:border-gold/50 hover:bg-ink-light transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
         >
@@ -97,7 +86,7 @@ export function RoleSelector() {
           <span className="font-medium text-sm">I&apos;m the player</span>
         </button>
         <button
-          disabled={loading || !name}
+          disabled={loading}
           onClick={() => handleRoleSubmit("adult")}
           className="flex flex-col items-center gap-2 border border-parchment/15 rounded-xl py-6 hover:border-gold/50 hover:bg-ink-light transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
         >

@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUserContext, getHoldingsWithInstruments } from "@/lib/data/context";
 import { Lock, Trophy } from "lucide-react";
+import { OnboardingInviteEntry } from "@/components/app/onboarding-invite-entry";
 
 function formatCurrency(n: number) {
   return n.toLocaleString("en-AU", { style: "currency", currency: "AUD", maximumFractionDigits: 2 });
@@ -25,6 +26,7 @@ export default async function CompetePage() {
               : "Invite your child from the Portfolio tab — once they're linked, you can compete together."}
           </p>
         </div>
+        <OnboardingInviteEntry role={profile.role} displayName={profile.display_name ?? ""} />
       </main>
     );
   }
