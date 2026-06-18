@@ -9,13 +9,7 @@ export function HoldingsList({ holdings }: { holdings: HoldingWithInstrument[] }
   if (holdings.length === 0) {
     return (
       <div className="border border-dashed border-parchment/15 rounded-2xl p-8 text-center">
-        <p className="text-parchment-dim mb-4">You don&apos;t own anything yet.</p>
-        <Link
-          href="/app/research"
-          className="inline-block bg-gold text-ink font-semibold px-6 py-2.5 rounded-full hover:bg-gold/90 transition-colors text-sm"
-        >
-          Browse companies to buy
-        </Link>
+        <p className="text-parchment-dim">You don&apos;t own anything yet — use the button above to buy your first stock.</p>
       </div>
     );
   }
@@ -29,7 +23,7 @@ export function HoldingsList({ holdings }: { holdings: HoldingWithInstrument[] }
         return (
           <Link
             key={h.id}
-            href={`/app/research?instrument=${h.instruments.ticker}`}
+            href={`/app/trade?instrument=${h.instruments.ticker}`}
             className="flex items-center justify-between bg-ink-light rounded-xl border border-parchment/10 px-4 py-3.5 hover:border-gold/30 transition-colors"
           >
             <div className="flex items-center gap-3">

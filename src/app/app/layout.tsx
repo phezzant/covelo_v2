@@ -9,9 +9,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   const progress = {
     hasHoldings: holdingsCount > 0,
-    profileComplete: Boolean(
-      profile.display_name?.trim() && profile.username?.trim() && profile.avatar_emoji
-    ),
+    profileComplete: Boolean(profile.username?.trim()),
     hasPartnerInvite: Boolean(activePartner || pendingPartner),
   };
 

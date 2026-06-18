@@ -1,23 +1,6 @@
-import { getAllInstruments } from "@/lib/data/context";
-import { InstrumentBrowser } from "@/components/app/instrument-browser";
-import { OnboardingCta } from "@/components/app/onboarding-cta";
+import { redirect } from "next/navigation";
 
-export default async function ResearchPage() {
-  const instruments = await getAllInstruments();
-
-  return (
-    <main className="max-w-3xl mx-auto px-4 sm:px-6 py-6">
-      <h1 className="font-display text-3xl mb-1">Research &amp; Trade</h1>
-      <p className="text-parchment-dim text-sm mb-6">
-        Browse companies, see how they&apos;re performing, and make a trade.
-      </p>
-
-      {/* Step 2: the only thing the child can do is reveal the Top Picks. */}
-      <OnboardingCta stepId={2} action="reveal-top-picks" dataTour="reveal-cta">
-        Show me the Top Picks
-      </OnboardingCta>
-
-      <InstrumentBrowser instruments={instruments} />
-    </main>
-  );
+// The Research tab was renamed to Trade. Preserve old links/bookmarks.
+export default function ResearchRedirect() {
+  redirect("/app/trade");
 }

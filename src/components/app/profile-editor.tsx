@@ -13,18 +13,17 @@ export function ProfileEditor({ profile }: { profile: Profile }) {
   const supabase = createClient();
   const { fire } = useOnboarding();
 
-  const [name, setName] = useState(profile.display_name ?? "");
   const [emoji, setEmoji] = useState(profile.avatar_emoji);
   const [username, setUsername] = useState(profile.username ?? "");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const canSave = name.trim().length > 0 && username.trim().length > 0;
+  const canSave = username.trim().length > 0;
 
   async function handleSave() {
     if (!canSave) {
-      setError("Please add your name and a username.");
+      setError("Please choose a leaderboard username.");
       return;
     }
     setError(null);
@@ -32,11 +31,7 @@ export function ProfileEditor({ profile }: { profile: Profile }) {
     setSaved(false);
     const { error: saveError } = await supabase
       .from("profiles")
-      .update({
-        display_name: name.trim(),
-        avatar_emoji: emoji,
-        username: username.trim() || null,
-      })
+      .update({ avatar_emoji: emoji, username: username.trim() })
       .eq("id", profile.id);
     setSaving(false);
     if (saveError) {
@@ -51,18 +46,6 @@ export function ProfileEditor({ profile }: { profile: Profile }) {
 
   return (
     <div data-tour="profile-editor" className="bg-ink-light border border-parchment/10 rounded-2xl p-6">
-      <label htmlFor="display-name" className="block text-sm text-parchment-dim mb-1.5">
-        Your name
-      </label>
-      <input
-        id="display-name"
-        type="text"
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-        placeholder="What should we call you?"
-        className="w-full bg-ink border border-parchment/15 rounded-lg px-4 py-2.5 text-parchment placeholder:text-ink-muted focus:outline-none focus:ring-2 focus:ring-gold/50 focus:border-gold/50 transition-colors mb-5"
-      />
-
       <p className="text-sm text-parchment-dim mb-3">Choose an avatar</p>
       <div className="grid grid-cols-5 gap-2 mb-6">
         {EMOJI_OPTIONS.map((e) => (

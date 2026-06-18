@@ -2,7 +2,8 @@ import { getCurrentUserContext, getHoldingsWithInstruments } from "@/lib/data/co
 import { PortfolioSummary } from "@/components/app/portfolio-summary";
 import { HoldingsList } from "@/components/app/holdings-list";
 import { PartnerBanner } from "@/components/app/partner-banner";
-import { OnboardingCta } from "@/components/app/onboarding-cta";
+import { PortfolioCta } from "@/components/app/portfolio-cta";
+import { OnboardingBanner } from "@/components/app/onboarding-banner";
 
 export default async function PortfolioPage() {
   const { profile, portfolio, activePartner, pendingPartner, partnerProfile } =
@@ -20,6 +21,8 @@ export default async function PortfolioPage() {
 
   return (
     <main className="max-w-3xl mx-auto px-4 sm:px-6 py-6">
+      <OnboardingBanner page="portfolio" />
+
       <PartnerBanner
         role={profile.role}
         displayName={profile.display_name ?? ""}
@@ -33,8 +36,6 @@ export default async function PortfolioPage() {
       </h1>
       <p className="text-parchment-dim text-sm mb-6">Here&apos;s how your portfolio&apos;s doing.</p>
 
-      {/* Spotlight region for onboarding step 1: the summary stays bright and the
-          injected CTA below it is the only clickable control. */}
       <div data-tour="portfolio-spotlight">
         <PortfolioSummary
           totalValue={totalValue}
@@ -42,9 +43,7 @@ export default async function PortfolioPage() {
           cashBalance={cashBalance}
           totalPL={totalPL}
         />
-        <OnboardingCta stepId={1} action="goto-research">
-          Research &amp; Purchase stocks
-        </OnboardingCta>
+        <PortfolioCta hasHoldings={holdings.length > 0} />
       </div>
 
       <h2 className="font-display text-xl mt-10 mb-4">Your holdings</h2>

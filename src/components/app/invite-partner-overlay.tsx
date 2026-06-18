@@ -20,15 +20,18 @@ export function InvitePartnerOverlay({
   const router = useRouter();
   const supabase = createClient();
   const { active, step, fire } = useOnboarding();
-  const guiding = active && step?.id === 6;
+  const guiding = active && step?.requiredAction === "send-invite";
 
+  const isChild = role === "child";
+  // The user's own name is captured here if it wasn't set earlier.
+  const needsOwnName = !displayName.trim();
+
+  const [ownName, setOwnName] = useState(displayName);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sent, setSent] = useState(false);
-
-  const isChild = role === "child";
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -43,11 +46,14 @@ export function InvitePartnerOverlay({
       return;
     }
 
-    // Try to find an existing profile with this email via auth lookup is not
-    // available client-side with the anon key, so for this prototype we match
-    // on a profiles.username/display_name-free lookup: we simply store the
-    // invited_email/name and leave adult_id/child_id null until the invited
-    // person signs up and claims the invite (see /app/onboarding claim step).
+    // Capture the inviter's own name if we don't have it yet.
+    if (needsOwnName && ownName.trim()) {
+      await supabase
+        .from("profiles")
+        .update({ display_name: ownName.trim() })
+        .eq("id", user.id);
+    }
+
     const { error: insertError } = await supabase.from("journey_partner").insert({
       adult_id: isChild ? null : user.id,
       child_id: isChild ? user.id : null,
@@ -81,7 +87,7 @@ export function InvitePartnerOverlay({
           <h2 className="font-display text-2xl mb-2">Invite sent</h2>
           <p className="text-parchment-dim text-sm mb-6">
             We&apos;ve let {name} know. Once they confirm, you&apos;ll
-            {isChild ? " unlock Compete/Compare." : " be able to play together."}
+            {isChild ? " unlock Compete & Compare." : " be able to play together."}
           </p>
           <button
             onClick={onClose}
@@ -95,14 +101,14 @@ export function InvitePartnerOverlay({
   }
 
   return (
-    <Overlay onClose={guiding ? () => {} : onClose} hideClose={guiding} title="Invite your Investment Partner">
+    <Overlay onClose={onClose} title="Invite your Investment Partner">
       <h2 className="font-display text-2xl mb-1">
         {isChild ? "Invite your Investment Partner" : "Invite your child"}
       </h2>
       <p className="text-parchment-dim text-sm mb-6">
         {isChild
-          ? "Because it involves big decisions, we recommend partnering with an adult — Mum, Dad, Grandpa, etc."
-          : `${displayName}, who's the child you'd like to bring along on Covelo?`}
+          ? "Who will be your Investment Partner? They need to be 18 or older — Mum, Dad, or another grown-up you trust is usually the best choice."
+          : `${ownName || "You"}, who's the child you'd like to bring along on Covelo?`}
       </p>
       {error && (
         <p className="text-loss text-sm mb-4 bg-loss/10 border border-loss/20 rounded-lg px-4 py-2.5">
@@ -110,11 +116,22 @@ export function InvitePartnerOverlay({
         </p>
       )}
       <form onSubmit={handleSubmit}>
+        {needsOwnName && (
+          <FormField
+            label="Your name"
+            id="own-name"
+            type="text"
+            placeholder="So they know who's inviting them"
+            value={ownName}
+            onChange={(e) => setOwnName(e.target.value)}
+            required
+          />
+        )}
         <FormField
-          label="Their name"
+          label={isChild ? "Your partner's name" : "Their name"}
           id="invite-name"
           type="text"
-          placeholder={isChild ? "e.g. Mum, Dad, Grandpa" : "Their name"}
+          placeholder={isChild ? "e.g. Mum, Dad, Billy" : "Their name"}
           value={name}
           onChange={(e) => setName(e.target.value)}
           required
@@ -130,7 +147,7 @@ export function InvitePartnerOverlay({
         />
         <div className="mt-6">
           <PrimaryButton type="submit" loading={loading}>
-            Send invite
+            {isChild ? "Invite my Investment Partner" : "Send invite"}
           </PrimaryButton>
         </div>
       </form>

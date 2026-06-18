@@ -1,0 +1,1715 @@
+diff --git a/src/app/app/compete/page.tsx b/src/app/app/compete/page.tsx
+index 026f9f3..34d131b 100644
+--- a/src/app/app/compete/page.tsx
++++ b/src/app/app/compete/page.tsx
+@@ -1,7 +1,8 @@
+ import { createClient } from "@/lib/supabase/server";
+ import { getCurrentUserContext, getHoldingsWithInstruments } from "@/lib/data/context";
+ import { Lock, Trophy } from "lucide-react";
+-import { OnboardingInviteEntry } from "@/components/app/onboarding-invite-entry";
++import { ProfileEditor } from "@/components/app/profile-editor";
++import { OnboardingBanner } from "@/components/app/onboarding-banner";
+ 
+ function formatCurrency(n: number) {
+   return n.toLocaleString("en-AU", { style: "currency", currency: "AUD", maximumFractionDigits: 2 });
+@@ -10,23 +11,35 @@ function formatCurrency(n: number) {
+ export default async function CompetePage() {
+   const { profile, portfolio, activePartner, partnerProfile } = await getCurrentUserContext();
+ 
++  const identity = (
++    <section className="mb-10">
++      <p className="font-mono text-xs uppercase tracking-[0.15em] text-gold mb-3">
++        Your leaderboard identity
++      </p>
++      <ProfileEditor profile={profile} />
++    </section>
++  );
++
+   if (!activePartner) {
+     return (
+       <main className="max-w-3xl mx-auto px-4 sm:px-6 py-6">
++        <OnboardingBanner page="compete" />
+         <h1 className="font-display text-3xl mb-1">Compete &amp; Compare</h1>
+-        <p className="text-parchment-dim text-sm mb-10">
+-          Benchmark your decisions against your Investment Partner — and friends.
++        <p className="text-parchment-dim text-sm mb-8">
++          Covelo is all about competing with friends and family — whoever makes the most money wins.
+         </p>
+-        <div className="flex flex-col items-center text-center border border-dashed border-parchment/15 rounded-2xl py-16 px-6">
++
++        {identity}
++
++        <div className="flex flex-col items-center text-center border border-dashed border-parchment/15 rounded-2xl py-14 px-6">
+           <Lock size={28} className="text-ink-muted mb-4" />
+-          <p className="font-display text-xl mb-2">This tab is locked</p>
++          <p className="font-display text-xl mb-2">Competing is locked for now</p>
+           <p className="text-parchment-dim text-sm max-w-sm">
+             {profile.role === "child"
+-              ? "Invite your Investment Partner from the Portfolio tab to unlock competing and comparing."
+-              : "Invite your child from the Portfolio tab — once they're linked, you can compete together."}
++              ? "Invite your Investment Partner from the Profile tab to unlock competing and comparing."
++              : "Invite your child from the Profile tab — once they're linked, you can compete together."}
+           </p>
+         </div>
+-        <OnboardingInviteEntry role={profile.role} displayName={profile.display_name ?? ""} />
+       </main>
+     );
+   }
+@@ -36,8 +49,6 @@ export default async function CompetePage() {
+     (portfolio?.cash_balance ?? 0) +
+     holdings.reduce((sum, h) => sum + h.quantity * h.instruments.price, 0);
+ 
+-  // Partner's portfolio is visible via the RLS partner-read policy on
+-  // `portfolios` and `holdings` — query it directly for their real value.
+   const partnerId = profile.role === "child" ? activePartner.adult_id : activePartner.child_id;
+   let partnerValue = 0;
+   if (partnerId) {
+@@ -57,6 +68,7 @@ export default async function CompetePage() {
+ 
+   return (
+     <main className="max-w-3xl mx-auto px-4 sm:px-6 py-6">
++      <OnboardingBanner page="compete" />
+       <h1 className="font-display text-3xl mb-1">Compete &amp; Compare</h1>
+       <p className="text-parchment-dim text-sm mb-8">
+         You and {partnerProfile?.display_name ?? "your partner"}, head to head.
+@@ -75,14 +87,16 @@ export default async function CompetePage() {
+         </div>
+       </div>
+ 
++      {identity}
++
+       <div className="flex items-center gap-2 mb-4">
+         <Trophy size={16} className="text-gold" />
+         <p className="font-mono text-xs uppercase tracking-[0.15em] text-gold">Leaderboard</p>
+       </div>
+       <div className="border border-dashed border-parchment/15 rounded-2xl p-8 text-center">
+         <p className="text-parchment-dim text-sm">
+-          Friend leaderboards open up once more families have joined. For now, it&apos;s just
+-          you and {partnerProfile?.display_name ?? "your partner"}.
++          Friend leaderboards open up once more families have joined. For now, it&apos;s just you and{" "}
++          {partnerProfile?.display_name ?? "your partner"}.
+         </p>
+       </div>
+     </main>
+diff --git a/src/app/app/layout.tsx b/src/app/app/layout.tsx
+index 86eaa6d..6d95913 100644
+--- a/src/app/app/layout.tsx
++++ b/src/app/app/layout.tsx
+@@ -9,9 +9,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
+ 
+   const progress = {
+     hasHoldings: holdingsCount > 0,
+-    profileComplete: Boolean(
+-      profile.display_name?.trim() && profile.username?.trim() && profile.avatar_emoji
+-    ),
++    profileComplete: Boolean(profile.username?.trim()),
+     hasPartnerInvite: Boolean(activePartner || pendingPartner),
+   };
+ 
+diff --git a/src/app/app/loading.tsx b/src/app/app/loading.tsx
+new file mode 100644
+index 0000000..8cbf241
+--- /dev/null
++++ b/src/app/app/loading.tsx
+@@ -0,0 +1,15 @@
++export default function AppLoading() {
++  return (
++    <main className="max-w-3xl mx-auto px-4 sm:px-6 py-6 animate-pulse">
++      <div className="h-8 w-48 bg-ink-light rounded-lg mb-3" />
++      <div className="h-4 w-64 bg-ink-light rounded mb-8" />
++      <div className="h-28 bg-ink-light rounded-2xl mb-4" />
++      <div className="h-12 bg-ink-light rounded-full mb-8" />
++      <div className="flex flex-col gap-2">
++        <div className="h-16 bg-ink-light rounded-xl" />
++        <div className="h-16 bg-ink-light rounded-xl" />
++        <div className="h-16 bg-ink-light rounded-xl" />
++      </div>
++    </main>
++  );
++}
+diff --git a/src/app/app/portfolio/page.tsx b/src/app/app/portfolio/page.tsx
+index d7659b8..caf393e 100644
+--- a/src/app/app/portfolio/page.tsx
++++ b/src/app/app/portfolio/page.tsx
+@@ -2,7 +2,8 @@ import { getCurrentUserContext, getHoldingsWithInstruments } from "@/lib/data/co
+ import { PortfolioSummary } from "@/components/app/portfolio-summary";
+ import { HoldingsList } from "@/components/app/holdings-list";
+ import { PartnerBanner } from "@/components/app/partner-banner";
+-import { OnboardingCta } from "@/components/app/onboarding-cta";
++import { PortfolioCta } from "@/components/app/portfolio-cta";
++import { OnboardingBanner } from "@/components/app/onboarding-banner";
+ 
+ export default async function PortfolioPage() {
+   const { profile, portfolio, activePartner, pendingPartner, partnerProfile } =
+@@ -20,6 +21,8 @@ export default async function PortfolioPage() {
+ 
+   return (
+     <main className="max-w-3xl mx-auto px-4 sm:px-6 py-6">
++      <OnboardingBanner page="portfolio" />
++
+       <PartnerBanner
+         role={profile.role}
+         displayName={profile.display_name ?? ""}
+@@ -33,8 +36,6 @@ export default async function PortfolioPage() {
+       </h1>
+       <p className="text-parchment-dim text-sm mb-6">Here&apos;s how your portfolio&apos;s doing.</p>
+ 
+-      {/* Spotlight region for onboarding step 1: the summary stays bright and the
+-          injected CTA below it is the only clickable control. */}
+       <div data-tour="portfolio-spotlight">
+         <PortfolioSummary
+           totalValue={totalValue}
+@@ -42,9 +43,7 @@ export default async function PortfolioPage() {
+           cashBalance={cashBalance}
+           totalPL={totalPL}
+         />
+-        <OnboardingCta stepId={1} action="goto-research">
+-          Research &amp; Purchase stocks
+-        </OnboardingCta>
++        <PortfolioCta hasHoldings={holdings.length > 0} />
+       </div>
+ 
+       <h2 className="font-display text-xl mt-10 mb-4">Your holdings</h2>
+diff --git a/src/app/app/profile/page.tsx b/src/app/app/profile/page.tsx
+index 16bf1aa..4c53994 100644
+--- a/src/app/app/profile/page.tsx
++++ b/src/app/app/profile/page.tsx
+@@ -1,33 +1,44 @@
+ import { getCurrentUserContext } from "@/lib/data/context";
+-import { ProfileEditor } from "@/components/app/profile-editor";
++import { PartnerSection } from "@/components/app/partner-section";
+ import { LogoutButton } from "@/components/app/logout-button";
+ import { RestartTourButton } from "@/components/app/restart-tour-button";
++import { OnboardingBanner } from "@/components/app/onboarding-banner";
+ 
+ export default async function ProfilePage() {
+-  const { profile, activePartner, partnerProfile } = await getCurrentUserContext();
++  const { profile, activePartner, pendingPartner, partnerProfile } =
++    await getCurrentUserContext();
+ 
+   return (
+     <main className="max-w-3xl mx-auto px-4 sm:px-6 py-6">
++      <OnboardingBanner page="profile" />
++
+       <h1 className="font-display text-3xl mb-1">My Profile</h1>
+       <p className="text-parchment-dim text-sm mb-8">
+-        This is how you show up on the leaderboard.
++        Manage your Investment Partner and account.
+       </p>
+ 
+-      <ProfileEditor profile={profile} />
++      <p className="font-mono text-xs uppercase tracking-[0.15em] text-gold mb-3">
++        Investment Partner
++      </p>
++      <PartnerSection
++        role={profile.role}
++        displayName={profile.display_name ?? ""}
++        activePartner={activePartner}
++        pendingPartner={pendingPartner}
++        partnerName={partnerProfile?.display_name}
++      />
+ 
+       <div className="mt-10 pt-6 border-t border-parchment/10">
+         <p className="font-mono text-xs uppercase tracking-[0.15em] text-ink-muted mb-3">
+           Account
+         </p>
+         <div className="flex items-center justify-between bg-ink-light rounded-xl border border-parchment/10 px-4 py-3.5 mb-3">
+-          <span className="text-sm text-parchment-dim">Role</span>
+-          <span className="text-sm font-medium capitalize">{profile.role}</span>
++          <span className="text-sm text-parchment-dim">Name</span>
++          <span className="text-sm font-medium">{profile.display_name ?? "Not set"}</span>
+         </div>
+         <div className="flex items-center justify-between bg-ink-light rounded-xl border border-parchment/10 px-4 py-3.5 mb-3">
+-          <span className="text-sm text-parchment-dim">Investment Partner</span>
+-          <span className="text-sm font-medium">
+-            {activePartner ? partnerProfile?.display_name ?? "Linked" : "Not linked yet"}
+-          </span>
++          <span className="text-sm text-parchment-dim">Role</span>
++          <span className="text-sm font-medium capitalize">{profile.role}</span>
+         </div>
+       </div>
+ 
+diff --git a/src/app/app/research/page.tsx b/src/app/app/research/page.tsx
+index e66a41f..c29d4cd 100644
+--- a/src/app/app/research/page.tsx
++++ b/src/app/app/research/page.tsx
+@@ -1,23 +1,6 @@
+-import { getAllInstruments } from "@/lib/data/context";
+-import { InstrumentBrowser } from "@/components/app/instrument-browser";
+-import { OnboardingCta } from "@/components/app/onboarding-cta";
++import { redirect } from "next/navigation";
+ 
+-export default async function ResearchPage() {
+-  const instruments = await getAllInstruments();
+-
+-  return (
+-    <main className="max-w-3xl mx-auto px-4 sm:px-6 py-6">
+-      <h1 className="font-display text-3xl mb-1">Research &amp; Trade</h1>
+-      <p className="text-parchment-dim text-sm mb-6">
+-        Browse companies, see how they&apos;re performing, and make a trade.
+-      </p>
+-
+-      {/* Step 2: the only thing the child can do is reveal the Top Picks. */}
+-      <OnboardingCta stepId={2} action="reveal-top-picks" dataTour="reveal-cta">
+-        Show me the Top Picks
+-      </OnboardingCta>
+-
+-      <InstrumentBrowser instruments={instruments} />
+-    </main>
+-  );
++// The Research tab was renamed to Trade. Preserve old links/bookmarks.
++export default function ResearchRedirect() {
++  redirect("/app/trade");
+ }
+diff --git a/src/app/app/trade/page.tsx b/src/app/app/trade/page.tsx
+new file mode 100644
+index 0000000..37190c9
+--- /dev/null
++++ b/src/app/app/trade/page.tsx
+@@ -0,0 +1,20 @@
++import { getAllInstruments } from "@/lib/data/context";
++import { InstrumentBrowser } from "@/components/app/instrument-browser";
++import { OnboardingBanner } from "@/components/app/onboarding-banner";
++
++export default async function TradePage() {
++  const instruments = await getAllInstruments();
++
++  return (
++    <main className="max-w-3xl mx-auto px-4 sm:px-6 py-6">
++      <OnboardingBanner page="trade" />
++
++      <h1 className="font-display text-3xl mb-1">Trade</h1>
++      <p className="text-parchment-dim text-sm mb-6">
++        Research companies, see how they&apos;re performing, and decide what to buy or sell.
++      </p>
++
++      <InstrumentBrowser instruments={instruments} />
++    </main>
++  );
++}
+diff --git a/src/app/signup/page.tsx b/src/app/signup/page.tsx
+index 9b68bb2..6bb2d2c 100644
+--- a/src/app/signup/page.tsx
++++ b/src/app/signup/page.tsx
+@@ -71,16 +71,25 @@ export default function SignupPage() {
+   if (step === "role") {
+     return (
+       <AuthShell
+-        title="One more thing"
+-        subtitle="Are you the one learning to invest, or the one helping someone learn?"
++        title="Welcome to Covelo"
++        subtitle="Covelo is a game where you learn to invest in real companies using practice money — alongside an Investment Partner you trust, like a parent or your child."
+       >
++        <div className="bg-ink-light border border-parchment/10 rounded-2xl p-5 mb-6">
++          <p className="text-sm text-parchment-dim leading-relaxed">
++            You play as a pair: one of you is learning the ropes, the other is the trusted
++            grown-up helping out. To set you up the right way, just tell us which one you are.
++          </p>
++        </div>
+         <RoleSelector />
+       </AuthShell>
+     );
+   }
+ 
+   return (
+-    <AuthShell title="Create your account" subtitle="Start with $10,000 in practice money.">
++    <AuthShell
++      title="Welcome to Covelo"
++      subtitle="Learn to invest in real companies with $10,000 of practice money — playing alongside someone you trust."
++    >
+       {error && (
+         <p className="text-loss text-sm mb-4 bg-loss/10 border border-loss/20 rounded-lg px-4 py-2.5">
+           {error}
+diff --git a/src/components/app/holdings-list.tsx b/src/components/app/holdings-list.tsx
+index 2f73a2b..1fe0cd0 100644
+--- a/src/components/app/holdings-list.tsx
++++ b/src/components/app/holdings-list.tsx
+@@ -9,13 +9,7 @@ export function HoldingsList({ holdings }: { holdings: HoldingWithInstrument[] }
+   if (holdings.length === 0) {
+     return (
+       <div className="border border-dashed border-parchment/15 rounded-2xl p-8 text-center">
+-        <p className="text-parchment-dim mb-4">You don&apos;t own anything yet.</p>
+-        <Link
+-          href="/app/research"
+-          className="inline-block bg-gold text-ink font-semibold px-6 py-2.5 rounded-full hover:bg-gold/90 transition-colors text-sm"
+-        >
+-          Browse companies to buy
+-        </Link>
++        <p className="text-parchment-dim">You don&apos;t own anything yet — use the button above to buy your first stock.</p>
+       </div>
+     );
+   }
+@@ -29,7 +23,7 @@ export function HoldingsList({ holdings }: { holdings: HoldingWithInstrument[] }
+         return (
+           <Link
+             key={h.id}
+-            href={`/app/research?instrument=${h.instruments.ticker}`}
++            href={`/app/trade?instrument=${h.instruments.ticker}`}
+             className="flex items-center justify-between bg-ink-light rounded-xl border border-parchment/10 px-4 py-3.5 hover:border-gold/30 transition-colors"
+           >
+             <div className="flex items-center gap-3">
+diff --git a/src/components/app/instrument-browser.tsx b/src/components/app/instrument-browser.tsx
+index 7693578..096a8b8 100644
+--- a/src/components/app/instrument-browser.tsx
++++ b/src/components/app/instrument-browser.tsx
+@@ -9,7 +9,7 @@ import { useOnboarding } from "@/lib/onboarding/context";
+ export function InstrumentBrowser({ instruments }: { instruments: Instrument[] }) {
+   const [query, setQuery] = useState("");
+   const [selected, setSelected] = useState<Instrument | null>(null);
+-  const { active, step, allows, fire } = useOnboarding();
++  const { active, allows, fire } = useOnboarding();
+ 
+   const filtered = useMemo(() => {
+     if (!query.trim()) return instruments;
+@@ -21,9 +21,6 @@ export function InstrumentBrowser({ instruments }: { instruments: Instrument[] }
+ 
+   const topPicks = instruments.slice(0, 5);
+ 
+-  // During step 2 the browser is hidden — the only action is the reveal CTA.
+-  if (active && step?.id === 2) return null;
+-
+   const searchDisabled = active && !allows("search");
+   const listDisabled = active && !allows("select-any");
+   const pickAllowed = allows("select-pick");
+@@ -55,9 +52,12 @@ export function InstrumentBrowser({ instruments }: { instruments: Instrument[] }
+ 
+       {!query && (
+         <div data-tour="top-picks" className="mb-8">
+-          <p className="font-mono text-xs uppercase tracking-[0.15em] text-gold mb-3">
++          <p className="font-mono text-xs uppercase tracking-[0.15em] text-gold mb-1">
+             Top picks
+           </p>
++          <p className="text-xs text-ink-muted mb-3">
++            The hottest companies right now — the ones other people are buying.
++          </p>
+           <div className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1">
+             {topPicks.map((inst) => (
+               <button
+diff --git a/src/components/app/invite-partner-overlay.tsx b/src/components/app/invite-partner-overlay.tsx
+index 137a350..2da1525 100644
+--- a/src/components/app/invite-partner-overlay.tsx
++++ b/src/components/app/invite-partner-overlay.tsx
+@@ -20,16 +20,19 @@ export function InvitePartnerOverlay({
+   const router = useRouter();
+   const supabase = createClient();
+   const { active, step, fire } = useOnboarding();
+-  const guiding = active && step?.id === 6;
++  const guiding = active && step?.requiredAction === "send-invite";
+ 
++  const isChild = role === "child";
++  // The user's own name is captured here if it wasn't set earlier.
++  const needsOwnName = !displayName.trim();
++
++  const [ownName, setOwnName] = useState(displayName);
+   const [name, setName] = useState("");
+   const [email, setEmail] = useState("");
+   const [loading, setLoading] = useState(false);
+   const [error, setError] = useState<string | null>(null);
+   const [sent, setSent] = useState(false);
+ 
+-  const isChild = role === "child";
+-
+   async function handleSubmit(e: React.FormEvent) {
+     e.preventDefault();
+     setError(null);
+@@ -43,11 +46,14 @@ export function InvitePartnerOverlay({
+       return;
+     }
+ 
+-    // Try to find an existing profile with this email via auth lookup is not
+-    // available client-side with the anon key, so for this prototype we match
+-    // on a profiles.username/display_name-free lookup: we simply store the
+-    // invited_email/name and leave adult_id/child_id null until the invited
+-    // person signs up and claims the invite (see /app/onboarding claim step).
++    // Capture the inviter's own name if we don't have it yet.
++    if (needsOwnName && ownName.trim()) {
++      await supabase
++        .from("profiles")
++        .update({ display_name: ownName.trim() })
++        .eq("id", user.id);
++    }
++
+     const { error: insertError } = await supabase.from("journey_partner").insert({
+       adult_id: isChild ? null : user.id,
+       child_id: isChild ? user.id : null,
+@@ -81,7 +87,7 @@ export function InvitePartnerOverlay({
+           <h2 className="font-display text-2xl mb-2">Invite sent</h2>
+           <p className="text-parchment-dim text-sm mb-6">
+             We&apos;ve let {name} know. Once they confirm, you&apos;ll
+-            {isChild ? " unlock Compete/Compare." : " be able to play together."}
++            {isChild ? " unlock Compete & Compare." : " be able to play together."}
+           </p>
+           <button
+             onClick={onClose}
+@@ -95,14 +101,14 @@ export function InvitePartnerOverlay({
+   }
+ 
+   return (
+-    <Overlay onClose={guiding ? () => {} : onClose} hideClose={guiding} title="Invite your Investment Partner">
++    <Overlay onClose={onClose} title="Invite your Investment Partner">
+       <h2 className="font-display text-2xl mb-1">
+         {isChild ? "Invite your Investment Partner" : "Invite your child"}
+       </h2>
+       <p className="text-parchment-dim text-sm mb-6">
+         {isChild
+-          ? "Because it involves big decisions, we recommend partnering with an adult — Mum, Dad, Grandpa, etc."
+-          : `${displayName}, who's the child you'd like to bring along on Covelo?`}
++          ? "Who will be your Investment Partner? They need to be 18 or older — Mum, Dad, or another grown-up you trust is usually the best choice."
++          : `${ownName || "You"}, who's the child you'd like to bring along on Covelo?`}
+       </p>
+       {error && (
+         <p className="text-loss text-sm mb-4 bg-loss/10 border border-loss/20 rounded-lg px-4 py-2.5">
+@@ -110,11 +116,22 @@ export function InvitePartnerOverlay({
+         </p>
+       )}
+       <form onSubmit={handleSubmit}>
++        {needsOwnName && (
++          <FormField
++            label="Your name"
++            id="own-name"
++            type="text"
++            placeholder="So they know who's inviting them"
++            value={ownName}
++            onChange={(e) => setOwnName(e.target.value)}
++            required
++          />
++        )}
+         <FormField
+-          label="Their name"
++          label={isChild ? "Your partner's name" : "Their name"}
+           id="invite-name"
+           type="text"
+-          placeholder={isChild ? "e.g. Mum, Dad, Grandpa" : "Their name"}
++          placeholder={isChild ? "e.g. Mum, Dad, Billy" : "Their name"}
+           value={name}
+           onChange={(e) => setName(e.target.value)}
+           required
+@@ -130,7 +147,7 @@ export function InvitePartnerOverlay({
+         />
+         <div className="mt-6">
+           <PrimaryButton type="submit" loading={loading}>
+-            Send invite
++            {isChild ? "Invite my Investment Partner" : "Send invite"}
+           </PrimaryButton>
+         </div>
+       </form>
+diff --git a/src/components/app/onboarding-banner.tsx b/src/components/app/onboarding-banner.tsx
+new file mode 100644
+index 0000000..0222666
+--- /dev/null
++++ b/src/components/app/onboarding-banner.tsx
+@@ -0,0 +1,27 @@
++"use client";
++
++import { useOnboarding } from "@/lib/onboarding/context";
++
++/**
++ * Inline onboarding guidance, blended into the page rather than shown as a
++ * floating tour card. Renders only when the current step belongs to `page` and
++ * is an inline step. The tour still draws the spotlight around the target.
++ */
++export function OnboardingBanner({
++  page,
++}: {
++  page: "portfolio" | "trade" | "compete" | "profile";
++}) {
++  const { active, step, stepNumber, totalSteps } = useOnboarding();
++  if (!active || !step || step.tab !== page || !step.inline) return null;
++
++  return (
++    <div className="bg-gold/10 border border-gold/30 rounded-2xl p-5 mb-6">
++      <p className="font-mono text-xs text-gold mb-2">
++        Step {stepNumber} of {totalSteps}
++      </p>
++      <h2 className="font-display text-xl mb-1.5">{step.title}</h2>
++      <p className="text-sm text-parchment leading-relaxed">{step.body}</p>
++    </div>
++  );
++}
+diff --git a/src/components/app/onboarding-cta.tsx b/src/components/app/onboarding-cta.tsx
+deleted file mode 100644
+index b896b85..0000000
+--- a/src/components/app/onboarding-cta.tsx
++++ /dev/null
+@@ -1,33 +0,0 @@
+-"use client";
+-
+-import { useOnboarding } from "@/lib/onboarding/context";
+-
+-/**
+- * A gold call-to-action that only appears during a specific onboarding step and
+- * advances the flow when tapped. Used to inject the forced "next move" directly
+- * into a real page (e.g. below the portfolio summary) rather than a tour button.
+- */
+-export function OnboardingCta({
+-  stepId,
+-  action,
+-  dataTour,
+-  children,
+-}: {
+-  stepId: number;
+-  action: string;
+-  dataTour?: string;
+-  children: React.ReactNode;
+-}) {
+-  const { active, step, fire } = useOnboarding();
+-  if (!active || step?.id !== stepId) return null;
+-
+-  return (
+-    <button
+-      data-tour={dataTour}
+-      onClick={() => fire(action)}
+-      className="mt-4 w-full bg-gold text-ink font-semibold py-3 rounded-full hover:bg-gold/90 transition-colors text-sm shadow-lg shadow-gold/20"
+-    >
+-      {children}
+-    </button>
+-  );
+-}
+diff --git a/src/components/app/onboarding-invite-entry.tsx b/src/components/app/onboarding-invite-entry.tsx
+deleted file mode 100644
+index e1ecefc..0000000
+--- a/src/components/app/onboarding-invite-entry.tsx
++++ /dev/null
+@@ -1,38 +0,0 @@
+-"use client";
+-
+-import { useState } from "react";
+-import { useOnboarding } from "@/lib/onboarding/context";
+-import { InvitePartnerOverlay } from "@/components/app/invite-partner-overlay";
+-import type { UserRole } from "@/types/database";
+-
+-export function OnboardingInviteEntry({
+-  role,
+-  displayName,
+-}: {
+-  role: UserRole;
+-  displayName: string;
+-}) {
+-  const { active, step } = useOnboarding();
+-  const [open, setOpen] = useState(false);
+-
+-  if (!active || step?.id !== 6) return null;
+-
+-  return (
+-    <>
+-      <button
+-        data-tour="invite-entry"
+-        onClick={() => setOpen(true)}
+-        className="mt-8 w-full bg-gold text-ink font-semibold py-3 rounded-full hover:bg-gold/90 transition-colors text-sm shadow-lg shadow-gold/20"
+-      >
+-        {role === "child" ? "Invite my Investment Partner" : "Invite my child"}
+-      </button>
+-      {open && (
+-        <InvitePartnerOverlay
+-          role={role}
+-          displayName={displayName}
+-          onClose={() => setOpen(false)}
+-        />
+-      )}
+-    </>
+-  );
+-}
+diff --git a/src/components/app/onboarding-tour.tsx b/src/components/app/onboarding-tour.tsx
+index ca7ca3f..3b61a36 100644
+--- a/src/components/app/onboarding-tour.tsx
++++ b/src/components/app/onboarding-tour.tsx
+@@ -6,15 +6,15 @@ import { useOnboarding } from "@/lib/onboarding/context";
+ 
+ const TAB_PATH: Record<string, string> = {
+   portfolio: "/app/portfolio",
+-  research: "/app/research",
++  trade: "/app/trade",
+   compete: "/app/compete",
+   profile: "/app/profile",
+ };
+ 
+-const PAD = 10; // spotlight padding around the target element
++const PAD = 10;
+ 
+ export function OnboardingTour() {
+-  const { active, step, stepIndex, totalSteps, fire, skip } = useOnboarding();
++  const { active, step, stepNumber, totalSteps, fire, skip } = useOnboarding();
+   const router = useRouter();
+   const pathname = usePathname();
+ 
+@@ -22,22 +22,18 @@ export function OnboardingTour() {
+   const [anchorMissing, setAnchorMissing] = useState(false);
+   const missingTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+ 
+-  // Route to the tab this step belongs to.
+   useEffect(() => {
+     if (!active || !step) return;
+     const target = TAB_PATH[step.tab];
+     if (target && pathname !== target) router.push(target);
+   }, [active, step, pathname, router]);
+ 
+-  // Track the spotlight target's position. Elements mount asynchronously after
+-  // navigation, so poll briefly until it appears, then keep it in sync.
+   useEffect(() => {
+     if (!active || !step || step.inOverlay || !step.anchor) {
+       if (missingTimer.current) clearTimeout(missingTimer.current);
+       return;
+     }
+     if (missingTimer.current) clearTimeout(missingTimer.current);
+-    // anti-soft-lock: if the target never appears, reveal a quiet fallback.
+     missingTimer.current = setTimeout(() => setAnchorMissing(true), 6000);
+ 
+     let raf = 0;
+@@ -71,14 +67,12 @@ export function OnboardingTour() {
+ 
+   if (!active || !step || step.inOverlay) return null;
+ 
+-  const hasHole = !!rect && !!step.anchor && !step.inOverlay;
+-  const placement: "top" | "bottom" | "center" = !rect
+-    ? "center"
+-    : rect.top + rect.height / 2 < window.innerHeight / 2
+-      ? "bottom"
+-      : "top";
++  // Inline steps blend copy into the page and get a highlight ring only (no
++  // full-screen dim, which would obscure the inline banner). The dim + card is
++  // reserved for deliberate modal moments (adult welcome, the finish screen).
++  const showCard = !step.inline;
++  const hasRing = !!rect && !!step.anchor;
+ 
+-  // Spotlight hole geometry
+   const hx = rect ? rect.left - PAD : 0;
+   const hy = rect ? rect.top - PAD : 0;
+   const hw = rect ? rect.width + PAD * 2 : 0;
+@@ -94,94 +88,80 @@ export function OnboardingTour() {
+     />
+   );
+ 
+-  const cardPositionClass =
+-    placement === "top"
+-      ? "top-6 sm:top-10"
+-      : placement === "bottom"
+-        ? "bottom-6 sm:bottom-10"
+-        : "top-1/2 -translate-y-1/2";
++  const ring = hasRing ? (
++    <div
++      className="z-40 pointer-events-none rounded-2xl"
++      style={{
++        position: "fixed",
++        top: hy,
++        left: hx,
++        width: hw,
++        height: hh,
++        border: "2px solid var(--color-gold)",
++        boxShadow: "0 0 24px 4px var(--color-gold), inset 0 0 0 1px rgba(255,255,255,0.06)",
++      }}
++    />
++  ) : null;
+ 
+   return (
+     <div className="fixed inset-0 z-40 pointer-events-none">
+-      {/* Dim backdrop. With a hole, four panels surround it so the spotlit
+-          element stays fully clickable; without one, a single dim layer. */}
+-      {hasHole ? (
++      {showCard && hasRing && (
+         <>
+           {panel({ top: 0, left: 0, right: 0, height: Math.max(hy, 0), pointerEvents: "auto" }, "t")}
+-          {panel(
+-            { top: hy + hh, left: 0, right: 0, bottom: 0, pointerEvents: "auto" },
+-            "b"
+-          )}
+-          {panel(
+-            { top: Math.max(hy, 0), left: 0, width: Math.max(hx, 0), height: hh, pointerEvents: "auto" },
+-            "l"
+-          )}
+-          {panel(
+-            { top: Math.max(hy, 0), left: hx + hw, right: 0, height: hh, pointerEvents: "auto" },
+-            "r"
+-          )}
+-          {/* glow ring around the spotlight */}
+-          <div
+-            className="z-40 pointer-events-none rounded-2xl"
+-            style={{
+-              position: "fixed",
+-              top: hy,
+-              left: hx,
+-              width: hw,
+-              height: hh,
+-              border: "2px solid var(--color-gold)",
+-              boxShadow:
+-                "0 0 0 9999px rgba(0,0,0,0), 0 0 24px 4px var(--color-gold), inset 0 0 0 1px rgba(255,255,255,0.06)",
+-            }}
+-          />
++          {panel({ top: hy + hh, left: 0, right: 0, bottom: 0, pointerEvents: "auto" }, "b")}
++          {panel({ top: Math.max(hy, 0), left: 0, width: Math.max(hx, 0), height: hh, pointerEvents: "auto" }, "l")}
++          {panel({ top: Math.max(hy, 0), left: hx + hw, right: 0, height: hh, pointerEvents: "auto" }, "r")}
+         </>
+-      ) : (
++      )}
++      {showCard && !hasRing && (
+         <div
+           onClick={(e) => e.stopPropagation()}
+           className="absolute inset-0 z-40 pointer-events-auto"
+           style={{ background: dim }}
+         />
+       )}
++      {ring}
+ 
+-      {/* Tutorial text card */}
+-      <div
+-        className={`fixed inset-x-4 sm:inset-x-0 sm:mx-auto sm:max-w-sm ${cardPositionClass} bg-ink-light border border-gold/30 rounded-2xl p-5 shadow-2xl pointer-events-auto z-40`}
+-        role="dialog"
+-        aria-modal="false"
+-        aria-label="Getting started"
+-      >
+-        <p className="font-mono text-xs text-gold mb-2">
+-          Step {stepIndex + 1} of {totalSteps}
+-        </p>
+-        <h3 className="font-display text-xl mb-1.5">{step.title}</h3>
+-        <p className="text-sm text-parchment-dim mb-4 leading-relaxed">{step.body}</p>
+-
+-        {step.showContinue && (
+-          <button
+-            onClick={() => fire("continue")}
+-            className="bg-gold text-ink font-semibold px-5 py-2 rounded-full hover:bg-gold/90 transition-colors text-sm w-full"
+-          >
+-            {stepIndex >= totalSteps - 1 ? "Start exploring" : "Continue"}
+-          </button>
+-        )}
++      {showCard && (
++        <div
++          className="fixed inset-x-4 sm:inset-x-0 sm:mx-auto sm:max-w-sm top-1/2 -translate-y-1/2 bg-ink-light border border-gold/30 rounded-2xl p-5 shadow-2xl pointer-events-auto z-40"
++          role="dialog"
++          aria-label="Getting started"
++        >
++          {!step.terminal && (
++            <p className="font-mono text-xs text-gold mb-2">
++              Step {stepNumber} of {totalSteps}
++            </p>
++          )}
++          <h3 className="font-display text-xl mb-1.5">{step.title}</h3>
++          <p className="text-sm text-parchment-dim mb-4 leading-relaxed">{step.body}</p>
++          {step.showContinue && (
++            <button
++              onClick={() => fire("continue")}
++              className="bg-gold text-ink font-semibold px-5 py-2 rounded-full hover:bg-gold/90 transition-colors text-sm w-full"
++            >
++              {step.terminal ? "Start exploring" : "Continue"}
++            </button>
++          )}
++        </div>
++      )}
+ 
+-        {!step.showContinue && anchorMissing && (
++      {/* Spotlight steps still need a way out and an anti-soft-lock escape. */}
++      <div className="fixed bottom-4 inset-x-0 flex justify-center gap-4 pointer-events-auto z-40">
++        {anchorMissing && !step.showContinue && (
+           <button
+             onClick={() => fire(step.requiredAction)}
+-            className="block text-xs text-ink-muted hover:text-parchment-dim transition-colors underline mb-2"
++            className="text-xs text-parchment-dim hover:text-parchment transition-colors underline"
+           >
+             Skip this step →
+           </button>
+         )}
+-
+-        <div className="mt-3 pt-3 border-t border-parchment/10 flex justify-center">
+-          <button
+-            onClick={skip}
+-            className="text-xs text-ink-muted hover:text-parchment-dim transition-colors"
+-          >
+-            Skip tour
+-          </button>
+-        </div>
++        <button
++          onClick={skip}
++          className="text-xs text-ink-muted hover:text-parchment-dim transition-colors"
++        >
++          Skip tour
++        </button>
+       </div>
+     </div>
+   );
+diff --git a/src/components/app/partner-banner.tsx b/src/components/app/partner-banner.tsx
+index 71a9a1a..2161e8c 100644
+--- a/src/components/app/partner-banner.tsx
++++ b/src/components/app/partner-banner.tsx
+@@ -1,13 +1,11 @@
+-"use client";
+-
+-import { useState } from "react";
+-import { Users, Clock, CheckCircle2 } from "lucide-react";
++import { Clock, CheckCircle2 } from "lucide-react";
+ import type { JourneyPartner, UserRole } from "@/types/database";
+-import { InvitePartnerOverlay } from "@/components/app/invite-partner-overlay";
+ 
++/**
++ * Portfolio-tab status strip. Inviting now happens on the Profile tab, so this
++ * only reflects partner status (active / pending) and renders nothing otherwise.
++ */
+ export function PartnerBanner({
+-  role,
+-  displayName,
+   activePartner,
+   pendingPartner,
+   partnerName,
+@@ -18,66 +16,30 @@ export function PartnerBanner({
+   pendingPartner: JourneyPartner | null;
+   partnerName?: string | null;
+ }) {
+-  const [showInvite, setShowInvite] = useState(false);
+-
+   if (activePartner) {
+     return (
+-      <div data-tour="partner-banner" className="flex items-center gap-3 bg-gold/10 border border-gold/25 rounded-xl px-4 py-3">
++      <div className="flex items-center gap-3 bg-gold/10 border border-gold/25 rounded-xl px-4 py-3">
+         <CheckCircle2 size={18} className="text-gold flex-shrink-0" />
+         <p className="text-sm">
+           <span className="font-medium">{partnerName ?? "Your Investment Partner"}</span> is your
+-          Investment Partner. Compete/Compare is unlocked.
++          Investment Partner. Compete &amp; Compare is unlocked.
+         </p>
+       </div>
+     );
+   }
+ 
+   if (pendingPartner) {
+-    const waitingOnLabel =
+-      pendingPartner.initiated_by === "child_invited_adult"
+-        ? pendingPartner.invited_name ?? "your invited adult"
+-        : pendingPartner.invited_name ?? "your invited child";
+-
++    const waitingOn = pendingPartner.invited_name ?? "your invite";
+     return (
+-      <div data-tour="partner-banner" className="flex items-center gap-3 bg-ink-light border border-parchment/10 rounded-xl px-4 py-3">
++      <div className="flex items-center gap-3 bg-ink-light border border-parchment/10 rounded-xl px-4 py-3">
+         <Clock size={18} className="text-ink-muted flex-shrink-0" />
+         <p className="text-sm text-parchment-dim">
+-          Waiting on <span className="font-medium text-parchment">{waitingOnLabel}</span> to
+-          confirm as your Investment Partner.
++          Waiting on <span className="font-medium text-parchment">{waitingOn}</span> to confirm as
++          your Investment Partner.
+         </p>
+       </div>
+     );
+   }
+ 
+-  return (
+-    <>
+-      <button
+-        data-tour="partner-banner"
+-        onClick={() => setShowInvite(true)}
+-        className="w-full flex items-center gap-3 bg-ink-light border border-parchment/10 rounded-xl px-4 py-3 hover:border-gold/30 transition-colors text-left"
+-      >
+-        <Users size={18} className="text-gold flex-shrink-0" />
+-        <p className="text-sm">
+-          {role === "child" ? (
+-            <>
+-              <span className="font-medium">Invite your Investment Partner</span> — usually a
+-              parent or guardian — to unlock Compete/Compare.
+-            </>
+-          ) : (
+-            <>
+-              <span className="font-medium">Invite your child</span> to play alongside you and
+-              unlock Compete/Compare.
+-            </>
+-          )}
+-        </p>
+-      </button>
+-      {showInvite && (
+-        <InvitePartnerOverlay
+-          role={role}
+-          displayName={displayName}
+-          onClose={() => setShowInvite(false)}
+-        />
+-      )}
+-    </>
+-  );
++  return null;
+ }
+diff --git a/src/components/app/partner-section.tsx b/src/components/app/partner-section.tsx
+new file mode 100644
+index 0000000..2a2bff6
+--- /dev/null
++++ b/src/components/app/partner-section.tsx
+@@ -0,0 +1,72 @@
++"use client";
++
++import { useState } from "react";
++import { Users, Clock, CheckCircle2 } from "lucide-react";
++import type { JourneyPartner, UserRole } from "@/types/database";
++import { InvitePartnerOverlay } from "@/components/app/invite-partner-overlay";
++
++export function PartnerSection({
++  role,
++  displayName,
++  activePartner,
++  pendingPartner,
++  partnerName,
++}: {
++  role: UserRole;
++  displayName: string;
++  activePartner: JourneyPartner | null;
++  pendingPartner: JourneyPartner | null;
++  partnerName?: string | null;
++}) {
++  const [showInvite, setShowInvite] = useState(false);
++
++  if (activePartner) {
++    return (
++      <div className="flex items-center gap-3 bg-gold/10 border border-gold/25 rounded-xl px-4 py-3">
++        <CheckCircle2 size={18} className="text-gold flex-shrink-0" />
++        <p className="text-sm">
++          <span className="font-medium">{partnerName ?? "Your Investment Partner"}</span> is your
++          Investment Partner. Compete &amp; Compare is unlocked.
++        </p>
++      </div>
++    );
++  }
++
++  if (pendingPartner) {
++    const waitingOn = pendingPartner.invited_name ?? "your invite";
++    return (
++      <div className="flex items-center gap-3 bg-ink-light border border-parchment/10 rounded-xl px-4 py-3">
++        <Clock size={18} className="text-ink-muted flex-shrink-0" />
++        <p className="text-sm text-parchment-dim">
++          Waiting on <span className="font-medium text-parchment">{waitingOn}</span> to confirm.
++        </p>
++      </div>
++    );
++  }
++
++  return (
++    <>
++      <button
++        data-tour="invite-entry"
++        onClick={() => setShowInvite(true)}
++        className="w-full flex items-center gap-3 bg-ink-light border border-parchment/10 rounded-xl px-4 py-3 hover:border-gold/30 transition-colors text-left"
++      >
++        <Users size={18} className="text-gold flex-shrink-0" />
++        <p className="text-sm">
++          {role === "child" ? (
++            <span className="font-medium">Invite my Investment Partner</span>
++          ) : (
++            <span className="font-medium">Invite my child</span>
++          )}
++        </p>
++      </button>
++      {showInvite && (
++        <InvitePartnerOverlay
++          role={role}
++          displayName={displayName}
++          onClose={() => setShowInvite(false)}
++        />
++      )}
++    </>
++  );
++}
+diff --git a/src/components/app/portfolio-cta.tsx b/src/components/app/portfolio-cta.tsx
+new file mode 100644
+index 0000000..eedebe9
+--- /dev/null
++++ b/src/components/app/portfolio-cta.tsx
+@@ -0,0 +1,33 @@
++"use client";
++
++import { useRouter } from "next/navigation";
++import { ArrowRight } from "lucide-react";
++import { useOnboarding } from "@/lib/onboarding/context";
++
++/**
++ * The Portfolio tab's primary "root" navigation CTA. It's dynamic: the label
++ * reflects the most important next action for the user. During onboarding it's
++ * the spotlight target and advances the flow when tapped.
++ */
++export function PortfolioCta({ hasHoldings }: { hasHoldings: boolean }) {
++  const router = useRouter();
++  const { fire } = useOnboarding();
++
++  const label = hasHoldings ? "Trade stocks" : "Buy your first stock";
++
++  function handleClick() {
++    fire("goto-trade"); // advances onboarding step 1 if active; no-op otherwise
++    router.push("/app/trade");
++  }
++
++  return (
++    <button
++      data-tour="portfolio-cta"
++      onClick={handleClick}
++      className="mt-4 w-full flex items-center justify-center gap-2 bg-gold text-ink font-semibold py-3.5 rounded-full hover:bg-gold/90 transition-colors text-sm shadow-lg shadow-gold/20"
++    >
++      {label}
++      <ArrowRight size={16} />
++    </button>
++  );
++}
+diff --git a/src/components/app/profile-editor.tsx b/src/components/app/profile-editor.tsx
+index d4a58cf..d59eca4 100644
+--- a/src/components/app/profile-editor.tsx
++++ b/src/components/app/profile-editor.tsx
+@@ -13,18 +13,17 @@ export function ProfileEditor({ profile }: { profile: Profile }) {
+   const supabase = createClient();
+   const { fire } = useOnboarding();
+ 
+-  const [name, setName] = useState(profile.display_name ?? "");
+   const [emoji, setEmoji] = useState(profile.avatar_emoji);
+   const [username, setUsername] = useState(profile.username ?? "");
+   const [saving, setSaving] = useState(false);
+   const [saved, setSaved] = useState(false);
+   const [error, setError] = useState<string | null>(null);
+ 
+-  const canSave = name.trim().length > 0 && username.trim().length > 0;
++  const canSave = username.trim().length > 0;
+ 
+   async function handleSave() {
+     if (!canSave) {
+-      setError("Please add your name and a username.");
++      setError("Please choose a leaderboard username.");
+       return;
+     }
+     setError(null);
+@@ -32,11 +31,7 @@ export function ProfileEditor({ profile }: { profile: Profile }) {
+     setSaved(false);
+     const { error: saveError } = await supabase
+       .from("profiles")
+-      .update({
+-        display_name: name.trim(),
+-        avatar_emoji: emoji,
+-        username: username.trim() || null,
+-      })
++      .update({ avatar_emoji: emoji, username: username.trim() })
+       .eq("id", profile.id);
+     setSaving(false);
+     if (saveError) {
+@@ -51,18 +46,6 @@ export function ProfileEditor({ profile }: { profile: Profile }) {
+ 
+   return (
+     <div data-tour="profile-editor" className="bg-ink-light border border-parchment/10 rounded-2xl p-6">
+-      <label htmlFor="display-name" className="block text-sm text-parchment-dim mb-1.5">
+-        Your name
+-      </label>
+-      <input
+-        id="display-name"
+-        type="text"
+-        value={name}
+-        onChange={(e) => setName(e.target.value)}
+-        placeholder="What should we call you?"
+-        className="w-full bg-ink border border-parchment/15 rounded-lg px-4 py-2.5 text-parchment placeholder:text-ink-muted focus:outline-none focus:ring-2 focus:ring-gold/50 focus:border-gold/50 transition-colors mb-5"
+-      />
+-
+       <p className="text-sm text-parchment-dim mb-3">Choose an avatar</p>
+       <div className="grid grid-cols-5 gap-2 mb-6">
+         {EMOJI_OPTIONS.map((e) => (
+diff --git a/src/components/app/tab-bar.tsx b/src/components/app/tab-bar.tsx
+index 73929be..08c52a7 100644
+--- a/src/components/app/tab-bar.tsx
++++ b/src/components/app/tab-bar.tsx
+@@ -7,7 +7,7 @@ import { useOnboarding } from "@/lib/onboarding/context";
+ 
+ const TABS = [
+   { href: "/app/portfolio", label: "Portfolio", icon: TrendingUp },
+-  { href: "/app/research", label: "Research", icon: LineChart },
++  { href: "/app/trade", label: "Trade", icon: LineChart },
+   { href: "/app/compete", label: "Compete", icon: Trophy },
+   { href: "/app/profile", label: "Profile", icon: User },
+ ];
+diff --git a/src/components/app/trade-overlay.tsx b/src/components/app/trade-overlay.tsx
+index faa8654..6784ed5 100644
+--- a/src/components/app/trade-overlay.tsx
++++ b/src/components/app/trade-overlay.tsx
+@@ -9,6 +9,46 @@ import { useOnboarding } from "@/lib/onboarding/context";
+ import type { Instrument, TradeSide } from "@/types/database";
+ 
+ const DENOMINATIONS = [50, 100, 250, 500];
++const MAX_DENOM = Math.max(...DENOMINATIONS);
++
++const CONFETTI_COLORS = ["var(--color-gold)", "#7dd3a8", "#f4a5c0", "#9bb8f0", "#f4d35e"];
++
++// Deterministic scatter from the index — pure, and visually plenty varied.
++const CONFETTI = Array.from({ length: 24 }, (_, i) => ({
++  left: (i * 37 + 13) % 100,
++  delay: ((i * 53) % 60) / 100,
++  dur: 1.4 + ((i * 29) % 120) / 100,
++  color: CONFETTI_COLORS[i % CONFETTI_COLORS.length],
++  size: 6 + ((i * 17) % 60) / 10,
++}));
++
++function Confetti() {
++  return (
++    <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
++      <style>{`
++        @keyframes covelo-fall {
++          0% { transform: translateY(-20px) rotate(0deg); opacity: 1; }
++          100% { transform: translateY(360px) rotate(540deg); opacity: 0; }
++        }
++      `}</style>
++      {CONFETTI.map((pc, i) => (
++        <span
++          key={i}
++          style={{
++            position: "absolute",
++            top: 0,
++            left: `${pc.left}%`,
++            width: pc.size,
++            height: pc.size * 1.6,
++            background: pc.color,
++            borderRadius: 1,
++            animation: `covelo-fall ${pc.dur}s ${pc.delay}s ease-in forwards`,
++          }}
++        />
++      ))}
++    </div>
++  );
++}
+ 
+ export function TradeOverlay({
+   instrument,
+@@ -19,20 +59,20 @@ export function TradeOverlay({
+ }) {
+   const router = useRouter();
+   const supabase = createClient();
+-  const { active, step, fire } = useOnboarding();
++  const { active, step, fire, back } = useOnboarding();
+ 
+-  // Onboarding step 4: guide the first purchase. Lock to "buy", block closing,
+-  // and only advance once a real trade goes through.
+-  const guiding = active && step?.id === 4;
++  // Onboarding buy step: guide the first purchase.
++  const guidingBuy = active && step?.requiredAction === "confirm-buy";
+ 
+   const [side, setSide] = useState<TradeSide>("buy");
+-  const [amount, setAmount] = useState<number | null>(null);
++  const [amount, setAmount] = useState<number | null>(guidingBuy ? MAX_DENOM : null);
+   const [loading, setLoading] = useState(false);
+   const [error, setError] = useState<string | null>(null);
+   const [confirmed, setConfirmed] = useState(false);
++  const [celebrate, setCelebrate] = useState(false);
+ 
+   const shares = amount ? amount / instrument.price : 0;
+-  const effectiveSide: TradeSide = guiding ? "buy" : side;
++  const effectiveSide: TradeSide = guidingBuy ? "buy" : side;
+ 
+   async function handleTrade() {
+     if (!amount) return;
+@@ -128,32 +168,67 @@ export function TradeOverlay({
+ 
+     setLoading(false);
+     setConfirmed(true);
++    if (guidingBuy) {
++      setCelebrate(true);
++      fire("confirm-buy"); // advances onboarding to the celebration step
++    }
+     router.refresh();
+   }
+ 
+-  // While guiding, the close affordances are disabled until the buy is done.
+-  const guardedClose = guiding && !confirmed ? () => {} : onClose;
++  // Closing the buy form during onboarding steps back to the Trade tab.
++  function handleBuyClose() {
++    if (guidingBuy) back();
++    onClose();
++  }
+ 
++  // Onboarding celebration screen.
++  if (confirmed && celebrate) {
++    return (
++      <Overlay onClose={() => {}} title="Purchase complete" hideClose>
++        <div className="relative text-center py-4">
++          <Confetti />
++          <p className="text-5xl mb-3">🎉</p>
++          <h2 className="font-display text-2xl mb-2">You&apos;re an investor now!</h2>
++          <p className="text-parchment mb-4">
++            Congratulations — you now own a piece of{" "}
++            <span className="font-semibold">{instrument.name}</span>.
++          </p>
++          <p className="text-parchment-dim text-sm mb-6">
++            A portfolio usually means owning shares in lots of different companies, not just one — so
++            come back later and buy some more with the cash you&apos;ve got. But for now, let&apos;s
++            set up your profile.
++          </p>
++          <button
++            onClick={() => {
++              fire("goto-profile-setup");
++              onClose();
++            }}
++            className="bg-gold text-ink font-semibold px-6 py-2.5 rounded-full hover:bg-gold/90 transition-colors text-sm"
++          >
++            Set up profile
++          </button>
++        </div>
++      </Overlay>
++    );
++  }
++
++  // Normal (non-onboarding) confirmation.
+   if (confirmed) {
+     return (
+-      <Overlay onClose={guardedClose} title="Trade confirmed">
++      <Overlay onClose={onClose} title="Trade confirmed">
+         <div className="text-center py-4">
+           <p className="text-3xl mb-3">{effectiveSide === "buy" ? "✅" : "💰"}</p>
+           <h2 className="font-display text-2xl mb-2">
+-            {effectiveSide === "buy" ? "Bought" : "Sold"} {instrument.ticker}
++            {effectiveSide === "buy" ? "Bought" : "Sold"} {instrument.name}
+           </h2>
+           <p className="text-parchment-dim text-sm mb-6">
+             {shares.toFixed(4)} shares at ${instrument.price.toFixed(2)} each.
+-            {guiding ? " You're officially an investor — let's finish setting you up." : ""}
+           </p>
+           <button
+-            onClick={() => {
+-              if (guiding) fire("confirm-buy");
+-              onClose();
+-            }}
++            onClick={onClose}
+             className="bg-gold text-ink font-semibold px-6 py-2.5 rounded-full hover:bg-gold/90 transition-colors text-sm"
+           >
+-            {guiding ? "Next" : "Done"}
++            Done
+           </button>
+         </div>
+       </Overlay>
+@@ -161,15 +236,15 @@ export function TradeOverlay({
+   }
+ 
+   return (
+-    <Overlay onClose={guardedClose} title={instrument.name} hideClose={guiding}>
+-      {guiding && (
++    <Overlay onClose={guidingBuy ? handleBuyClose : onClose} title={instrument.name}>
++      {guidingBuy && (
+         <div className="bg-gold/10 border border-gold/30 rounded-xl p-4 mb-5">
+           <p className="text-sm text-parchment leading-relaxed">
+-            Would you like to buy some <span className="font-semibold">{instrument.name}</span> stock?
+-            {instrument.description ? ` ${instrument.description}` : ""} Owning a small piece of a
+-            company is called buying <span className="font-semibold">Shares</span>. Pick an amount
+-            below, then tap Buy. If the company does well, your portfolio grows — and you can always
+-            sell later.
++            Now you&apos;re looking at <span className="font-semibold">{instrument.name}</span>. The
++            price per share is <span className="font-semibold">${instrument.price.toFixed(2)}</span>.
++            This moves with the most recent transaction — whenever someone buys or sells. The graph
++            shows how the price has changed across today. We&apos;ll explain all this in more detail
++            later, but for now, try buying some shares in {instrument.name}.
+           </p>
+         </div>
+       )}
+@@ -205,7 +280,7 @@ export function TradeOverlay({
+         />
+       </svg>
+ 
+-      {instrument.description && !guiding && (
++      {instrument.description && !guidingBuy && (
+         <p className="text-sm text-parchment-dim mb-5">{instrument.description}</p>
+       )}
+ 
+@@ -219,11 +294,11 @@ export function TradeOverlay({
+           Buy
+         </button>
+         <button
+-          onClick={() => !guiding && setSide("sell")}
+-          disabled={guiding}
++          onClick={() => !guidingBuy && setSide("sell")}
++          disabled={guidingBuy}
+           className={`flex-1 py-2 rounded-full text-sm font-semibold transition-colors ${
+             effectiveSide === "sell" ? "bg-gold text-ink" : "text-parchment-dim"
+-          } ${guiding ? "opacity-40 cursor-not-allowed" : ""}`}
++          } ${guidingBuy ? "opacity-40 cursor-not-allowed" : ""}`}
+         >
+           Sell
+         </button>
+@@ -260,7 +335,7 @@ export function TradeOverlay({
+         </p>
+       )}
+ 
+-      <div className={guiding && amount ? "rounded-full ring-2 ring-gold/60 animate-pulse" : ""}>
++      <div className={guidingBuy && amount ? "rounded-full ring-2 ring-gold/60 animate-pulse" : ""}>
+         <PrimaryButton onClick={handleTrade} disabled={!amount} loading={loading}>
+           Confirm {effectiveSide}
+         </PrimaryButton>
+diff --git a/src/lib/onboarding/context.tsx b/src/lib/onboarding/context.tsx
+index 4c2dc0e..9ae7d2a 100644
+--- a/src/lib/onboarding/context.tsx
++++ b/src/lib/onboarding/context.tsx
+@@ -25,14 +25,15 @@ type OnboardingContextValue = {
+   active: boolean;
+   role: UserRole;
+   step: OnboardingStep | null;
+-  stepIndex: number;
++  /** 1-based number among non-terminal steps, for "Step X of N". */
++  stepNumber: number;
+   totalSteps: number;
+   fire: (actionId: string) => void;
+   allows: (actionId: string) => boolean;
+   complete: () => void;
+   skip: () => void;
+-  /** Replay the whole guided tour from the beginning (manual/demo restart). */
+   restart: () => void;
++  back: () => void;
+ };
+ 
+ const Ctx = createContext<OnboardingContextValue | null>(null);
+@@ -44,42 +45,43 @@ export function useOnboarding(): OnboardingContextValue {
+       active: false,
+       role: "child",
+       step: null,
+-      stepIndex: 0,
++      stepNumber: 0,
+       totalSteps: 0,
+       fire: () => {},
+       allows: () => true,
+       complete: () => {},
+       skip: () => {},
+       restart: () => {},
++      back: () => {},
+     };
+   }
+   return ctx;
+ }
+ 
+-// Whether a given step's underlying task is already done, per real app state.
++// Whether a step's underlying task is already done, per real app state.
+ function isSatisfied(step: OnboardingStep, p: OnboardingProgress): boolean {
+   switch (step.requiredAction) {
+-    case "goto-research":
+-    case "reveal-top-picks":
++    case "goto-trade":
+     case "select-pick":
+     case "confirm-buy":
++    case "goto-profile-setup":
+       return p.hasHoldings; // the whole buy-flow is one task
+     case "save-profile":
+       return p.profileComplete;
+     case "send-invite":
+       return p.hasPartnerInvite;
+     case "continue":
+-      // pure-UI steps (welcome / done): "done" only once everything else is
+       return p.hasHoldings && p.profileComplete && p.hasPartnerInvite;
+     default:
+       return false;
+   }
+ }
+ 
+-// Which tabs may re-arm the tour when opened with their task incomplete.
++// Tabs that may re-arm the tour when opened with their task incomplete.
++// Note the swap: profile setup lives on /compete, invite lives on /profile.
+ const REENGAGE_BY_PATH: Record<string, string> = {
+-  "/app/profile": "save-profile",
+-  "/app/compete": "send-invite",
++  "/app/compete": "save-profile",
++  "/app/profile": "send-invite",
+ };
+ 
+ export function OnboardingProvider({
+@@ -99,7 +101,6 @@ export function OnboardingProvider({
+ 
+   const steps = useMemo(() => getOnboardingSteps(role), [role]);
+ 
+-  // First unsatisfied step = smart resume point.
+   const smartStartIndex = useMemo(() => {
+     const idx = steps.findIndex((s) => !isSatisfied(s, progress));
+     return idx >= 0 ? idx : steps.length - 1;
+@@ -107,11 +108,18 @@ export function OnboardingProvider({
+ 
+   const [stepIndex, setStepIndex] = useState(smartStartIndex);
+   const [active, setActive] = useState(!completed);
+-  // Once skipped this session, don't auto re-arm until reload or manual restart.
+   const snoozed = useRef(false);
+ 
+   const step = active ? steps[stepIndex] ?? null : null;
+ 
++  const totalSteps = useMemo(() => steps.filter((s) => !s.terminal).length, [steps]);
++  const stepNumber = useMemo(() => {
++    if (!step) return 0;
++    const nonTerminal = steps.filter((s) => !s.terminal);
++    const idx = nonTerminal.findIndex((s) => s.id === step.id);
++    return idx >= 0 ? idx + 1 : totalSteps;
++  }, [step, steps, totalSteps]);
++
+   const persist = useCallback(
+     async (newStepId: number, isComplete: boolean) => {
+       const { data: userData } = await supabase.auth.getUser();
+@@ -159,6 +167,14 @@ export function OnboardingProvider({
+     void persist(steps[0].id, false);
+   }, [steps, persist]);
+ 
++  const back = useCallback(() => {
++    setStepIndex((prev) => {
++      const next = Math.max(prev - 1, 0);
++      void persist(steps[next].id, false);
++      return next;
++    });
++  }, [steps, persist]);
++
+   const fire = useCallback(
+     (actionId: string) => {
+       if (!active || !step) return;
+@@ -176,18 +192,15 @@ export function OnboardingProvider({
+     [active, step]
+   );
+ 
+-  // Criteria-driven re-engagement: opening Profile/Compete with that task still
+-  // incomplete re-arms the tour at the relevant step (unless snoozed this session).
++  // Criteria-driven re-engagement on tab open (unless snoozed this session).
+   useEffect(() => {
+     if (active || snoozed.current) return;
+     const action = REENGAGE_BY_PATH[pathname];
+     if (!action) return;
+     const target = steps.find((s) => s.requiredAction === action);
+-    if (!target) return;
+-    if (isSatisfied(target, progress)) return;
++    if (!target || isSatisfied(target, progress)) return;
+     const idx = steps.findIndex((s) => s.id === target.id);
+-    // Re-arming in response to a URL/navigation change is an intentional
+-    // external-system sync, not derived render state.
++    // Intentional external-sync in response to navigation.
+     // eslint-disable-next-line react-hooks/set-state-in-effect
+     setStepIndex(idx);
+     setActive(true);
+@@ -197,13 +210,14 @@ export function OnboardingProvider({
+     active,
+     role,
+     step,
+-    stepIndex,
+-    totalSteps: steps.length,
++    stepNumber,
++    totalSteps,
+     fire,
+     allows,
+     complete,
+     skip,
+     restart,
++    back,
+   };
+ 
+   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
+diff --git a/src/lib/onboarding/steps.ts b/src/lib/onboarding/steps.ts
+index 1f32e47..8bcf450 100644
+--- a/src/lib/onboarding/steps.ts
++++ b/src/lib/onboarding/steps.ts
+@@ -2,27 +2,25 @@ import type { UserRole } from "@/types/database";
+ 
+ export type OnboardingStep = {
+   id: number;
+-  tab: "portfolio" | "research" | "compete" | "profile";
++  /** Which tab/route this step belongs to. */
++  tab: "portfolio" | "trade" | "compete" | "profile";
+   title: string;
+   body: string;
+-  /**
+-   * The logical action that satisfies this step. A real UI control fires it
+-   * via useOnboarding().fire(actionId); when it matches, the flow advances.
+-   * Use "continue" for steps advanced by the tutorial's own Continue button.
+-   */
++  /** Logical action that advances this step (fired by a real UI control). */
+   requiredAction: string;
+-  /** Extra interactions permitted at this step (everything else is disabled). */
++  /** Extra interactions permitted at this step; everything else is gated off. */
+   allow?: string[];
+-  /** Selector of the element to spotlight, if any. */
++  /** Element to spotlight, if any. */
+   anchor?: string;
+-  /** Where the tutorial text card sits relative to the spotlight. */
+-  placement?: "top" | "bottom" | "center";
+   /**
+-   * The step's guidance is rendered by an overlay component (e.g. the trade
+-   * overlay) rather than the tour card, because the relevant UI lives above
+-   * the tour in the stacking order. The tour suppresses its own card.
++   * Guidance is rendered inline on the page (a blended banner) rather than as a
++   * floating tour card. The tour still draws the spotlight around `anchor`.
+    */
++  inline?: boolean;
++  /** Guidance is rendered by an overlay (trade overlay). Tour shows nothing. */
+   inOverlay?: boolean;
++  /** Terminal celebration step — not counted in "step X of N". */
++  terminal?: boolean;
+   /** Render a Continue button in the card (advances via "continue"). */
+   showContinue?: boolean;
+ };
+@@ -33,90 +31,85 @@ const CHILD_STEPS: OnboardingStep[] = [
+     tab: "portfolio",
+     title: "Welcome to Covelo",
+     body:
+-      "This is your home base — where you can see how your portfolio is performing. " +
+-      "You've been handed $10,000 in cash to start, but you don't own any stocks yet. " +
+-      "Don't worry about taking it all in. Let's dive in and buy your first stock — " +
+-      "it'll make a lot more sense once you see what happens.",
+-    requiredAction: "goto-research",
++      "This is your home base — a snapshot of everything you own and how it's doing. " +
++      "You've been given $10,000 in cash to start, but you don't own any stocks yet. " +
++      "Let's fix that. Tap the gold button to go buy your first stock.",
++    requiredAction: "goto-trade",
+     allow: [],
+-    anchor: "[data-tour='portfolio-spotlight']",
+-    placement: "bottom",
++    anchor: "[data-tour='portfolio-cta']",
++    inline: true,
+   },
+   {
+     id: 2,
+-    tab: "research",
+-    title: "This is the Research tab",
++    tab: "trade",
++    title: "This is the Trade tab",
+     body:
+-      "This is where you find out whether a company is worth investing in. " +
+-      "If you like the look of one, you can buy a piece of it. " +
+-      "Let's start by browsing some of today's Top Picks.",
+-    requiredAction: "reveal-top-picks",
+-    allow: [],
+-    anchor: "[data-tour='reveal-cta']",
+-    placement: "bottom",
+-  },
+-  {
+-    id: 3,
+-    tab: "research",
+-    title: "Today's Top Picks",
+-    body:
+-      "These are the companies people are most interested in right now. They're making " +
+-      "waves — you might even recognise some from the news. Swipe through and tap one " +
+-      "that looks interesting to you.",
++      "This is where you research companies and decide which ones you want to buy and sell. " +
++      "Below are the Top Picks — the hottest companies right now, the ones other people are " +
++      "buying. Have a look and pick one you'd like to own a piece of.",
+     requiredAction: "select-pick",
+     allow: [],
+     anchor: "[data-tour='top-picks']",
+-    placement: "bottom",
++    inline: true,
+   },
+   {
+-    id: 4,
+-    // Guidance is rendered inside the trade overlay (which sits above the tour).
+-    tab: "research",
++    id: 3,
++    // Buy form — rendered inside the trade overlay.
++    tab: "trade",
+     title: "Buy your first shares",
+     body:
+-      "Owning a small piece of a company is called buying Shares. Pick an amount, then " +
+-      "tap Buy. If the company does well, the value of your portfolio goes up. Give it a " +
+-      "go — you can always sell later if you change your mind.",
++      "Owning a small piece of a company is called buying Shares. The largest amount is " +
++      "already selected, so you can just tap Confirm buy — or choose a smaller amount first.",
+     requiredAction: "confirm-buy",
+     allow: ["pick-amount"],
+     inOverlay: true,
+   },
++  {
++    id: 4,
++    // Celebration — rendered inside the trade overlay.
++    tab: "trade",
++    title: "You're an investor now!",
++    body: "Congratulations — you own your first piece of a company.",
++    requiredAction: "goto-profile-setup",
++    inOverlay: true,
++    terminal: true,
++  },
+   {
+     id: 5,
+-    tab: "profile",
+-    title: "Nice — you're an investor now",
++    tab: "compete",
++    title: "Set up your profile",
+     body:
+-      "You own your first stock. Now let's set up your profile so you show up on the " +
+-      "leaderboard. Add your name, pick an avatar, and choose a username — then save.",
++      "Covelo is all about competing with friends and family — whoever makes the most money " +
++      "wins. Before you compete, set up how you'll appear to everyone else. Pick an avatar and " +
++      "a leaderboard username, then save.",
+     requiredAction: "save-profile",
+     allow: ["edit-profile"],
+     anchor: "[data-tour='profile-editor']",
+-    placement: "top",
++    inline: true,
+   },
+   {
+     id: 6,
+-    tab: "compete",
++    tab: "profile",
+     title: "Invite your Investment Partner",
+     body:
+-      "Last step. Investing big decisions is better with a grown-up you trust — Mum, Dad, " +
+-      "a grandparent. Add their name and email and we'll invite them to join you. Once " +
+-      "they're in, Compete & Compare unlocks.",
++      "Your Investment Partner is a special player — someone you compete with, but also an ally " +
++      "you work with to take on others. It's an important choice: they need to be 18 or older, " +
++      "and ideally someone with a bit of experience. Mum or Dad is usually a great pick.",
+     requiredAction: "send-invite",
+     allow: ["open-invite"],
+     anchor: "[data-tour='invite-entry']",
+-    placement: "top",
++    inline: true,
+   },
+   {
+     id: 7,
+     tab: "portfolio",
+     title: "You're all set",
+     body:
+-      "You've got a portfolio with your first stock, a profile that's ready to go, and " +
+-      "your Investment Partner invited. When they join, you'll be able to compete and " +
+-      "compare. Welcome to Covelo.",
++      "You've bought your first stock, set up your profile, and invited your Investment Partner. " +
++      "When they join, Compete & Compare unlocks for both of you. Welcome to Covelo!",
+     requiredAction: "continue",
+     showContinue: true,
+-    placement: "center",
++    terminal: true,
+   },
+ ];
+ 
+@@ -126,29 +119,28 @@ const ADULT_STEPS: OnboardingStep[] = [
+     tab: "portfolio",
+     title: "Welcome to Covelo",
+     body:
+-      "You're here to help a child learn to invest — and you can play alongside them if " +
+-      "you like. This is your home base. You've got your own $10,000 practice balance; " +
+-      "using it yourself is optional, your main role is mentorship.",
++      "You're here to help a child learn to invest — and you can play alongside them. This is " +
++      "your home base, with your own $10,000 practice balance. Playing yourself is optional; " +
++      "your main role is mentor.",
+     requiredAction: "continue",
+     showContinue: true,
+-    anchor: "[data-tour='total-value']",
+-    placement: "bottom",
++    anchor: "[data-tour='portfolio-cta']",
+   },
+   {
+     id: 5,
+-    tab: "profile",
++    tab: "compete",
+     title: "Set up your profile",
+     body:
+-      "Add your name, pick an avatar, and choose a username. This is how your child will " +
+-      "see you once you're linked. Save when you're done.",
++      "Pick an avatar and a leaderboard username — this is how your child will see you once " +
++      "you're linked. Save when you're done.",
+     requiredAction: "save-profile",
+     allow: ["edit-profile"],
+     anchor: "[data-tour='profile-editor']",
+-    placement: "top",
++    inline: true,
+   },
+   {
+     id: 6,
+-    tab: "compete",
++    tab: "profile",
+     title: "Invite your child",
+     body:
+       "Bring your child onto Covelo so you can mentor them and unlock Compete & Compare " +
+@@ -156,18 +148,18 @@ const ADULT_STEPS: OnboardingStep[] = [
+     requiredAction: "send-invite",
+     allow: ["open-invite"],
+     anchor: "[data-tour='invite-entry']",
+-    placement: "top",
++    inline: true,
+   },
+   {
+     id: 7,
+     tab: "portfolio",
+     title: "You're all set",
+     body:
+-      "Once your child accepts, you'll see their progress here and Compete & Compare " +
+-      "opens up for both of you. Welcome to Covelo.",
++      "Once your child accepts, you'll see their progress here and Compete & Compare opens up " +
++      "for both of you. Welcome to Covelo!",
+     requiredAction: "continue",
+     showContinue: true,
+-    placement: "center",
++    terminal: true,
+   },
+ ];
+ 

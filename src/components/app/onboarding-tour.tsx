@@ -6,15 +6,15 @@ import { useOnboarding } from "@/lib/onboarding/context";
 
 const TAB_PATH: Record<string, string> = {
   portfolio: "/app/portfolio",
-  research: "/app/research",
+  trade: "/app/trade",
   compete: "/app/compete",
   profile: "/app/profile",
 };
 
-const PAD = 10; // spotlight padding around the target element
+const PAD = 10;
 
 export function OnboardingTour() {
-  const { active, step, stepIndex, totalSteps, fire, skip } = useOnboarding();
+  const { active, step, stepNumber, totalSteps, fire, skip } = useOnboarding();
   const router = useRouter();
   const pathname = usePathname();
 
@@ -22,22 +22,18 @@ export function OnboardingTour() {
   const [anchorMissing, setAnchorMissing] = useState(false);
   const missingTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Route to the tab this step belongs to.
   useEffect(() => {
     if (!active || !step) return;
     const target = TAB_PATH[step.tab];
     if (target && pathname !== target) router.push(target);
   }, [active, step, pathname, router]);
 
-  // Track the spotlight target's position. Elements mount asynchronously after
-  // navigation, so poll briefly until it appears, then keep it in sync.
   useEffect(() => {
     if (!active || !step || step.inOverlay || !step.anchor) {
       if (missingTimer.current) clearTimeout(missingTimer.current);
       return;
     }
     if (missingTimer.current) clearTimeout(missingTimer.current);
-    // anti-soft-lock: if the target never appears, reveal a quiet fallback.
     missingTimer.current = setTimeout(() => setAnchorMissing(true), 6000);
 
     let raf = 0;
@@ -71,14 +67,12 @@ export function OnboardingTour() {
 
   if (!active || !step || step.inOverlay) return null;
 
-  const hasHole = !!rect && !!step.anchor && !step.inOverlay;
-  const placement: "top" | "bottom" | "center" = !rect
-    ? "center"
-    : rect.top + rect.height / 2 < window.innerHeight / 2
-      ? "bottom"
-      : "top";
+  // Inline steps blend copy into the page and get a highlight ring only (no
+  // full-screen dim, which would obscure the inline banner). The dim + card is
+  // reserved for deliberate modal moments (adult welcome, the finish screen).
+  const showCard = !step.inline;
+  const hasRing = !!rect && !!step.anchor;
 
-  // Spotlight hole geometry
   const hx = rect ? rect.left - PAD : 0;
   const hy = rect ? rect.top - PAD : 0;
   const hw = rect ? rect.width + PAD * 2 : 0;
@@ -94,94 +88,80 @@ export function OnboardingTour() {
     />
   );
 
-  const cardPositionClass =
-    placement === "top"
-      ? "top-6 sm:top-10"
-      : placement === "bottom"
-        ? "bottom-6 sm:bottom-10"
-        : "top-1/2 -translate-y-1/2";
+  const ring = hasRing ? (
+    <div
+      className="z-40 pointer-events-none rounded-2xl"
+      style={{
+        position: "fixed",
+        top: hy,
+        left: hx,
+        width: hw,
+        height: hh,
+        border: "2px solid var(--color-gold)",
+        boxShadow: "0 0 24px 4px var(--color-gold), inset 0 0 0 1px rgba(255,255,255,0.06)",
+      }}
+    />
+  ) : null;
 
   return (
     <div className="fixed inset-0 z-40 pointer-events-none">
-      {/* Dim backdrop. With a hole, four panels surround it so the spotlit
-          element stays fully clickable; without one, a single dim layer. */}
-      {hasHole ? (
+      {showCard && hasRing && (
         <>
           {panel({ top: 0, left: 0, right: 0, height: Math.max(hy, 0), pointerEvents: "auto" }, "t")}
-          {panel(
-            { top: hy + hh, left: 0, right: 0, bottom: 0, pointerEvents: "auto" },
-            "b"
-          )}
-          {panel(
-            { top: Math.max(hy, 0), left: 0, width: Math.max(hx, 0), height: hh, pointerEvents: "auto" },
-            "l"
-          )}
-          {panel(
-            { top: Math.max(hy, 0), left: hx + hw, right: 0, height: hh, pointerEvents: "auto" },
-            "r"
-          )}
-          {/* glow ring around the spotlight */}
-          <div
-            className="z-40 pointer-events-none rounded-2xl"
-            style={{
-              position: "fixed",
-              top: hy,
-              left: hx,
-              width: hw,
-              height: hh,
-              border: "2px solid var(--color-gold)",
-              boxShadow:
-                "0 0 0 9999px rgba(0,0,0,0), 0 0 24px 4px var(--color-gold), inset 0 0 0 1px rgba(255,255,255,0.06)",
-            }}
-          />
+          {panel({ top: hy + hh, left: 0, right: 0, bottom: 0, pointerEvents: "auto" }, "b")}
+          {panel({ top: Math.max(hy, 0), left: 0, width: Math.max(hx, 0), height: hh, pointerEvents: "auto" }, "l")}
+          {panel({ top: Math.max(hy, 0), left: hx + hw, right: 0, height: hh, pointerEvents: "auto" }, "r")}
         </>
-      ) : (
+      )}
+      {showCard && !hasRing && (
         <div
           onClick={(e) => e.stopPropagation()}
           className="absolute inset-0 z-40 pointer-events-auto"
           style={{ background: dim }}
         />
       )}
+      {ring}
 
-      {/* Tutorial text card */}
-      <div
-        className={`fixed inset-x-4 sm:inset-x-0 sm:mx-auto sm:max-w-sm ${cardPositionClass} bg-ink-light border border-gold/30 rounded-2xl p-5 shadow-2xl pointer-events-auto z-40`}
-        role="dialog"
-        aria-modal="false"
-        aria-label="Getting started"
-      >
-        <p className="font-mono text-xs text-gold mb-2">
-          Step {stepIndex + 1} of {totalSteps}
-        </p>
-        <h3 className="font-display text-xl mb-1.5">{step.title}</h3>
-        <p className="text-sm text-parchment-dim mb-4 leading-relaxed">{step.body}</p>
+      {showCard && (
+        <div
+          className="fixed inset-x-4 sm:inset-x-0 sm:mx-auto sm:max-w-sm top-1/2 -translate-y-1/2 bg-ink-light border border-gold/30 rounded-2xl p-5 shadow-2xl pointer-events-auto z-40"
+          role="dialog"
+          aria-label="Getting started"
+        >
+          {!step.terminal && (
+            <p className="font-mono text-xs text-gold mb-2">
+              Step {stepNumber} of {totalSteps}
+            </p>
+          )}
+          <h3 className="font-display text-xl mb-1.5">{step.title}</h3>
+          <p className="text-sm text-parchment-dim mb-4 leading-relaxed">{step.body}</p>
+          {step.showContinue && (
+            <button
+              onClick={() => fire("continue")}
+              className="bg-gold text-ink font-semibold px-5 py-2 rounded-full hover:bg-gold/90 transition-colors text-sm w-full"
+            >
+              {step.terminal ? "Start exploring" : "Continue"}
+            </button>
+          )}
+        </div>
+      )}
 
-        {step.showContinue && (
-          <button
-            onClick={() => fire("continue")}
-            className="bg-gold text-ink font-semibold px-5 py-2 rounded-full hover:bg-gold/90 transition-colors text-sm w-full"
-          >
-            {stepIndex >= totalSteps - 1 ? "Start exploring" : "Continue"}
-          </button>
-        )}
-
-        {!step.showContinue && anchorMissing && (
+      {/* Spotlight steps still need a way out and an anti-soft-lock escape. */}
+      <div className="fixed bottom-4 inset-x-0 flex justify-center gap-4 pointer-events-auto z-40">
+        {anchorMissing && !step.showContinue && (
           <button
             onClick={() => fire(step.requiredAction)}
-            className="block text-xs text-ink-muted hover:text-parchment-dim transition-colors underline mb-2"
+            className="text-xs text-parchment-dim hover:text-parchment transition-colors underline"
           >
             Skip this step →
           </button>
         )}
-
-        <div className="mt-3 pt-3 border-t border-parchment/10 flex justify-center">
-          <button
-            onClick={skip}
-            className="text-xs text-ink-muted hover:text-parchment-dim transition-colors"
-          >
-            Skip tour
-          </button>
-        </div>
+        <button
+          onClick={skip}
+          className="text-xs text-ink-muted hover:text-parchment-dim transition-colors"
+        >
+          Skip tour
+        </button>
       </div>
     </div>
   );

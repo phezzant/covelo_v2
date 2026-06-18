@@ -9,7 +9,7 @@ import { useOnboarding } from "@/lib/onboarding/context";
 export function InstrumentBrowser({ instruments }: { instruments: Instrument[] }) {
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<Instrument | null>(null);
-  const { active, step, allows, fire } = useOnboarding();
+  const { active, allows, fire } = useOnboarding();
 
   const filtered = useMemo(() => {
     if (!query.trim()) return instruments;
@@ -20,9 +20,6 @@ export function InstrumentBrowser({ instruments }: { instruments: Instrument[] }
   }, [instruments, query]);
 
   const topPicks = instruments.slice(0, 5);
-
-  // During step 2 the browser is hidden — the only action is the reveal CTA.
-  if (active && step?.id === 2) return null;
 
   const searchDisabled = active && !allows("search");
   const listDisabled = active && !allows("select-any");
@@ -55,8 +52,11 @@ export function InstrumentBrowser({ instruments }: { instruments: Instrument[] }
 
       {!query && (
         <div data-tour="top-picks" className="mb-8">
-          <p className="font-mono text-xs uppercase tracking-[0.15em] text-gold mb-3">
+          <p className="font-mono text-xs uppercase tracking-[0.15em] text-gold mb-1">
             Top picks
+          </p>
+          <p className="text-xs text-ink-muted mb-3">
+            The hottest companies right now — the ones other people are buying.
           </p>
           <div className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1">
             {topPicks.map((inst) => (

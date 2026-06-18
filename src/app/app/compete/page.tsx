@@ -1,7 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUserContext, getHoldingsWithInstruments } from "@/lib/data/context";
 import { Lock, Trophy } from "lucide-react";
-import { OnboardingInviteEntry } from "@/components/app/onboarding-invite-entry";
+import { ProfileEditor } from "@/components/app/profile-editor";
+import { OnboardingBanner } from "@/components/app/onboarding-banner";
 
 function formatCurrency(n: number) {
   return n.toLocaleString("en-AU", { style: "currency", currency: "AUD", maximumFractionDigits: 2 });
@@ -10,23 +11,35 @@ function formatCurrency(n: number) {
 export default async function CompetePage() {
   const { profile, portfolio, activePartner, partnerProfile } = await getCurrentUserContext();
 
+  const identity = (
+    <section className="mb-10">
+      <p className="font-mono text-xs uppercase tracking-[0.15em] text-gold mb-3">
+        Your leaderboard identity
+      </p>
+      <ProfileEditor profile={profile} />
+    </section>
+  );
+
   if (!activePartner) {
     return (
       <main className="max-w-3xl mx-auto px-4 sm:px-6 py-6">
+        <OnboardingBanner page="compete" />
         <h1 className="font-display text-3xl mb-1">Compete &amp; Compare</h1>
-        <p className="text-parchment-dim text-sm mb-10">
-          Benchmark your decisions against your Investment Partner — and friends.
+        <p className="text-parchment-dim text-sm mb-8">
+          Covelo is all about competing with friends and family — whoever makes the most money wins.
         </p>
-        <div className="flex flex-col items-center text-center border border-dashed border-parchment/15 rounded-2xl py-16 px-6">
+
+        {identity}
+
+        <div className="flex flex-col items-center text-center border border-dashed border-parchment/15 rounded-2xl py-14 px-6">
           <Lock size={28} className="text-ink-muted mb-4" />
-          <p className="font-display text-xl mb-2">This tab is locked</p>
+          <p className="font-display text-xl mb-2">Competing is locked for now</p>
           <p className="text-parchment-dim text-sm max-w-sm">
             {profile.role === "child"
-              ? "Invite your Investment Partner from the Portfolio tab to unlock competing and comparing."
-              : "Invite your child from the Portfolio tab — once they're linked, you can compete together."}
+              ? "Invite your Investment Partner from the Profile tab to unlock competing and comparing."
+              : "Invite your child from the Profile tab — once they're linked, you can compete together."}
           </p>
         </div>
-        <OnboardingInviteEntry role={profile.role} displayName={profile.display_name ?? ""} />
       </main>
     );
   }
@@ -36,8 +49,6 @@ export default async function CompetePage() {
     (portfolio?.cash_balance ?? 0) +
     holdings.reduce((sum, h) => sum + h.quantity * h.instruments.price, 0);
 
-  // Partner's portfolio is visible via the RLS partner-read policy on
-  // `portfolios` and `holdings` — query it directly for their real value.
   const partnerId = profile.role === "child" ? activePartner.adult_id : activePartner.child_id;
   let partnerValue = 0;
   if (partnerId) {
@@ -57,6 +68,7 @@ export default async function CompetePage() {
 
   return (
     <main className="max-w-3xl mx-auto px-4 sm:px-6 py-6">
+      <OnboardingBanner page="compete" />
       <h1 className="font-display text-3xl mb-1">Compete &amp; Compare</h1>
       <p className="text-parchment-dim text-sm mb-8">
         You and {partnerProfile?.display_name ?? "your partner"}, head to head.
@@ -75,14 +87,16 @@ export default async function CompetePage() {
         </div>
       </div>
 
+      {identity}
+
       <div className="flex items-center gap-2 mb-4">
         <Trophy size={16} className="text-gold" />
         <p className="font-mono text-xs uppercase tracking-[0.15em] text-gold">Leaderboard</p>
       </div>
       <div className="border border-dashed border-parchment/15 rounded-2xl p-8 text-center">
         <p className="text-parchment-dim text-sm">
-          Friend leaderboards open up once more families have joined. For now, it&apos;s just
-          you and {partnerProfile?.display_name ?? "your partner"}.
+          Friend leaderboards open up once more families have joined. For now, it&apos;s just you and{" "}
+          {partnerProfile?.display_name ?? "your partner"}.
         </p>
       </div>
     </main>

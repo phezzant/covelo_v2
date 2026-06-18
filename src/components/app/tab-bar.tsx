@@ -7,7 +7,7 @@ import { useOnboarding } from "@/lib/onboarding/context";
 
 const TABS = [
   { href: "/app/portfolio", label: "Portfolio", icon: TrendingUp },
-  { href: "/app/research", label: "Research", icon: LineChart },
+  { href: "/app/trade", label: "Trade", icon: LineChart },
   { href: "/app/compete", label: "Compete", icon: Trophy },
   { href: "/app/profile", label: "Profile", icon: User },
 ];

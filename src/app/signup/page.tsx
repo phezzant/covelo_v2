@@ -71,16 +71,25 @@ export default function SignupPage() {
   if (step === "role") {
     return (
       <AuthShell
-        title="One more thing"
-        subtitle="Are you the one learning to invest, or the one helping someone learn?"
+        title="Welcome to Covelo"
+        subtitle="Covelo is a game where you learn to invest in real companies using practice money — alongside an Investment Partner you trust, like a parent or your child."
       >
+        <div className="bg-ink-light border border-parchment/10 rounded-2xl p-5 mb-6">
+          <p className="text-sm text-parchment-dim leading-relaxed">
+            You play as a pair: one of you is learning the ropes, the other is the trusted
+            grown-up helping out. To set you up the right way, just tell us which one you are.
+          </p>
+        </div>
         <RoleSelector />
       </AuthShell>
     );
   }
 
   return (
-    <AuthShell title="Create your account" subtitle="Start with $10,000 in practice money.">
+    <AuthShell
+      title="Welcome to Covelo"
+      subtitle="Learn to invest in real companies with $10,000 of practice money — playing alongside someone you trust."
+    >
       {error && (
         <p className="text-loss text-sm mb-4 bg-loss/10 border border-loss/20 rounded-lg px-4 py-2.5">
           {error}
