@@ -51,7 +51,7 @@ export function PendingInviteManager({
     });
   }
 
-  const waitingOn = pendingPartner.invited_name ?? "your Investment Partner";
+  const waitingOn = pendingPartner.invited_name ?? "your teammate";
 
   return (
     <>

@@ -90,9 +90,9 @@ const CHILD_STEPS: OnboardingStep[] = [
   {
     id: 6,
     tab: "profile",
-    title: "Invite your Investment Partner",
+    title: "Invite your teammate",
     body:
-      "Your Investment Partner is a special player — someone you compete with, but also an ally " +
+      "Your teammate is a special player — someone you compete with, but also an ally " +
       "you work with to take on others. It's an important choice: they need to be 18 or older, " +
       "and ideally someone with a bit of experience. Mum or Dad is usually a great pick.",
     requiredAction: "send-invite",
@@ -105,7 +105,7 @@ const CHILD_STEPS: OnboardingStep[] = [
     tab: "portfolio",
     title: "You're all set",
     body:
-      "You've bought your first stock, set up your profile, and invited your Investment Partner. " +
+      "You've bought your first stock, set up your profile, and invited your teammate. " +
       "When they join, Compete & Compare unlocks for both of you. Welcome to Covelo!",
     requiredAction: "continue",
     showContinue: true,

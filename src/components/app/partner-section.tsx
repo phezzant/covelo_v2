@@ -31,8 +31,8 @@ export function PartnerSection({
       <div className="flex items-center gap-3 bg-gold/10 border border-gold/25 rounded-xl px-4 py-3">
         <CheckCircle2 size={18} className="text-gold flex-shrink-0" />
         <p className="text-sm">
-          <span className="font-medium">{partnerName ?? "Your Investment Partner"}</span> is your
-          Investment Partner. Compete &amp; Compare is unlocked.
+          <span className="font-medium">{partnerName ?? "Your teammate"}</span> is your
+          teammate. Compete &amp; Compare is unlocked.
         </p>
       </div>
     );
@@ -55,7 +55,7 @@ export function PartnerSection({
         className={`w-full flex items-center justify-center gap-2 bg-gold text-ink font-semibold py-3.5 rounded-full hover:bg-gold/90 transition-colors text-sm shadow-lg shadow-gold/20 ${isHighlighted ? "gold-ring-pulse" : ""}`}
       >
         <Users size={18} className="flex-shrink-0" />
-        {role === "child" ? "Invite my Investment Partner" : "Invite my child"}
+        {role === "child" ? "Invite my teammate" : "Invite my child"}
       </button>
       {showInvite && (
         <InvitePartnerOverlay

@@ -36,7 +36,7 @@ export default async function CompetePage() {
           <p className="font-display text-xl mb-2">Competing is locked for now</p>
           <p className="text-parchment-dim text-sm max-w-sm">
             {profile.role === "child"
-              ? "Invite your Investment Partner from the Profile tab to unlock competing and comparing."
+              ? "Invite your teammate from the Profile tab to unlock competing and comparing."
               : "Invite your child from the Profile tab — once they're linked, you can compete together."}
           </p>
         </div>

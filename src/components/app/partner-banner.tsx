@@ -22,8 +22,8 @@ export function PartnerBanner({
       <div className="flex items-center gap-3 bg-gold/10 border border-gold/25 rounded-xl px-4 py-3">
         <CheckCircle2 size={18} className="text-gold flex-shrink-0" />
         <p className="text-sm">
-          <span className="font-medium">{partnerName ?? "Your Investment Partner"}</span> is your
-          Investment Partner. Compete &amp; Compare is unlocked.
+          <span className="font-medium">{partnerName ?? "Your teammate"}</span> is your
+          teammate. Compete &amp; Compare is unlocked.
         </p>
       </div>
     );

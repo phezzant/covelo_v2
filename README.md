@@ -2,7 +2,7 @@
 
 A click-through prototype of Covelo: landing page, signup/login, and a 4-tab
 app (Portfolio, Research & Trade, Compete & Compare, Profile) with a guided
-onboarding tutorial and a working Investment Partner invite flow.
+onboarding tutorial and a working Teammate invite flow.
 
 Built with Next.js (App Router) + Supabase (Auth + Postgres), intended for
 Vercel deployment.
@@ -14,7 +14,7 @@ Vercel deployment.
   tables with row-level security.
 - **Market data** is fully static/hardcoded (32 fake instruments, prices
   never move) — there's no live market data API in this prototype.
-- **Investment Partner invites** are simulated in-app, not real email. When
+- **Teammate invites** are simulated in-app, not real email. When
   you invite someone, the invite is stored as a `pending` row; it resolves
   to `active` automatically when someone signs up using the matching email
   address (see "How invites resolve" below). No email is actually sent.

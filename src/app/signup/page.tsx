@@ -72,7 +72,7 @@ export default function SignupPage() {
     return (
       <AuthShell
         title="Welcome to Covelo"
-        subtitle="Covelo is a game where you learn to invest in real companies using practice money — alongside an Investment Partner you trust, like a parent or your child."
+        subtitle="Covelo is a game where you learn to invest in real companies using practice money — alongside a teammate you trust, like a parent or your child."
       >
         <div className="bg-ink-light border border-parchment/10 rounded-2xl p-5 mb-6">
           <p className="text-sm text-parchment-dim leading-relaxed">

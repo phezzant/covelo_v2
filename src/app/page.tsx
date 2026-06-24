@@ -32,7 +32,7 @@ export default function LandingPage() {
           <span className="italic text-parchment-dim">together.</span>
         </h1>
         <p className="text-lg text-parchment-dim max-w-xl mb-10 leading-relaxed">
-          Covelo pairs a child with an Investment Partner — a parent, grandparent,
+          Covelo pairs a child with a teammate — a parent, grandparent,
           or mentor — for a real paper-trading game built on real markets. No
           lectures. Just a shared portfolio, and a reason to talk about money.
         </p>

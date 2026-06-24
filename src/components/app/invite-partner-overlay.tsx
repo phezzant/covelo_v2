@@ -101,13 +101,13 @@ export function InvitePartnerOverlay({
   }
 
   return (
-    <Overlay onClose={onClose} title="Invite your Investment Partner">
+    <Overlay onClose={onClose} title="Invite your teammate">
       <h2 className="font-display text-2xl mb-1">
-        {isChild ? "Invite your Investment Partner" : "Invite your child"}
+        {isChild ? "Invite your teammate" : "Invite your child"}
       </h2>
       <p className="text-parchment-dim text-sm mb-6">
         {isChild
-          ? "Who will be your Investment Partner? They need to be 18 or older — Mum, Dad, or another grown-up you trust is usually the best choice."
+          ? "Who will be your teammate? They need to be 18 or older — Mum, Dad, or another grown-up you trust is usually the best choice."
           : `${ownName || "You"}, who's the child you'd like to bring along on Covelo?`}
       </p>
       {error && (
@@ -147,7 +147,7 @@ export function InvitePartnerOverlay({
         />
         <div className="mt-6">
           <PrimaryButton type="submit" loading={loading}>
-            {isChild ? "Invite my Investment Partner" : "Send invite"}
+            {isChild ? "Invite my teammate" : "Send invite"}
           </PrimaryButton>
         </div>
       </form>

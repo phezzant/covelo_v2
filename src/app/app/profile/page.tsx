@@ -22,11 +22,11 @@ export default async function ProfilePage() {
 
       <h1 className="font-display text-3xl mb-1">My Profile</h1>
       <p className="text-parchment-dim text-sm mb-8">
-        Manage your Investment Partner and account.
+        Manage your teammate and account.
       </p>
 
       <p className="font-mono text-xs uppercase tracking-[0.15em] text-gold mb-3">
-        Investment Partner
+        Teammate
       </p>
       <PartnerSection
         role={profile.role}
