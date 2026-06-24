@@ -10,7 +10,7 @@ import { useOnboarding } from "@/lib/onboarding/context";
 export function OnboardingBanner({
   page,
 }: {
-  page: "portfolio" | "trade" | "compete" | "profile";
+  page: "home" | "trade" | "compete" | "profile";
 }) {
   const { active, step, stepNumber, totalSteps } = useOnboarding();
   if (!active || !step || step.tab !== page || !step.inline) return null;

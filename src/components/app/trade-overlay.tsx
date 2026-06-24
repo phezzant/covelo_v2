@@ -59,7 +59,7 @@ export function TradeOverlay({
 }) {
   const router = useRouter();
   const supabase = createClient();
-  const { active, step, fire, back } = useOnboarding();
+  const { active, role, step, fire, back } = useOnboarding();
 
   // Onboarding buy step: guide the first purchase.
   const guidingBuy = active && step?.requiredAction === "confirm-buy";
@@ -183,6 +183,8 @@ export function TradeOverlay({
 
   // Onboarding celebration screen.
   if (confirmed && celebrate) {
+    const isChild = role === "child";
+    const ctaLabel = isChild ? "Set up profile" : "Finish";
     return (
       <Overlay onClose={() => {}} title="Purchase complete" hideClose>
         <div className="relative text-center py-4">
@@ -194,18 +196,20 @@ export function TradeOverlay({
             <span className="font-semibold">{instrument.name}</span>.
           </p>
           <p className="text-parchment-dim text-sm mb-6">
-            A portfolio usually means owning shares in lots of different companies, not just one — so
-            come back later and buy some more with the cash you&apos;ve got. But for now, let&apos;s
-            set up your profile.
+            {isChild
+              ? "A portfolio usually means owning shares in lots of different companies, not just one — so come back later and buy some more with the cash you've got. But for now, let's set up your profile."
+              : "A portfolio usually means owning shares in lots of different companies — come back any time to keep building yours and mentoring your teammate."}
           </p>
           <button
             onClick={() => {
-              fire("goto-profile-setup");
+              // Advance whatever the live celebration step is:
+              // child → to-profile-setup, adult → to-finish.
+              fire(step?.requiredAction ?? "to-profile-setup");
               onClose();
             }}
             className="bg-gold text-ink font-semibold px-6 py-2.5 rounded-full hover:bg-gold/90 transition-colors text-sm"
           >
-            Set up profile
+            {ctaLabel}
           </button>
         </div>
       </Overlay>

@@ -58,31 +58,28 @@ export function useOnboarding(): OnboardingContextValue {
   return ctx;
 }
 
-// Whether a step's underlying task is already done, per real app state.
+// Whether a step's underlying task is already done, per real app state. This is
+// what lets us (a) resume a dropped-out user at the first incomplete step and
+// (b) skip steps that don't apply — e.g. an adult who arrived via an invite is
+// already linked, so the "invite teammate" step is satisfied and skipped.
 function isSatisfied(step: OnboardingStep, p: OnboardingProgress): boolean {
   switch (step.requiredAction) {
     case "goto-trade":
     case "select-pick":
     case "confirm-buy":
-    case "goto-profile-setup":
+    case "to-profile-setup":
+    case "to-finish":
       return p.hasHoldings; // the whole buy-flow is one task
     case "save-profile":
       return p.profileComplete;
     case "send-invite":
       return p.hasPartnerInvite;
+    // Welcome / finish cards always require an explicit tap; never auto-skipped.
     case "continue":
-      return p.hasHoldings && p.profileComplete && p.hasPartnerInvite;
     default:
       return false;
   }
 }
-
-// Tabs that may re-arm the tour when opened with their task incomplete.
-// Note the swap: profile setup lives on /compete, invite lives on /profile.
-const REENGAGE_BY_PATH: Record<string, string> = {
-  "/app/compete": "save-profile",
-  "/app/profile": "send-invite",
-};
 
 export function OnboardingProvider({
   role,
@@ -100,6 +97,12 @@ export function OnboardingProvider({
   const supabase = createClient();
 
   const steps = useMemo(() => getOnboardingSteps(role), [role]);
+
+  // Keep latest progress reachable inside callbacks without re-creating them.
+  const progressRef = useRef(progress);
+  useEffect(() => {
+    progressRef.current = progress;
+  }, [progress]);
 
   const smartStartIndex = useMemo(() => {
     const idx = steps.findIndex((s) => !isSatisfied(s, progress));
@@ -135,7 +138,16 @@ export function OnboardingProvider({
 
   const advance = useCallback(() => {
     setStepIndex((prev) => {
-      const next = prev + 1;
+      let next = prev + 1;
+      // Skip any forthcoming steps whose task is already done (e.g. a linked
+      // adult skips the invite step), but never skip a terminal card.
+      while (
+        next < steps.length &&
+        !steps[next].terminal &&
+        isSatisfied(steps[next], progressRef.current)
+      ) {
+        next += 1;
+      }
       if (next >= steps.length) {
         setActive(false);
         void persist(steps[steps.length - 1].id, true);
@@ -192,19 +204,22 @@ export function OnboardingProvider({
     [active, step]
   );
 
-  // Criteria-driven re-engagement on tab open (unless snoozed this session).
+  // Drop-out recovery. If the user abandoned the flow without finishing (and
+  // didn't explicitly skip — `completed` stays false in that case), landing on
+  // the Home tab re-arms the tour at the first incomplete step, which then
+  // navigates them onward. Direct visits to a step's own tab re-arm too.
   useEffect(() => {
-    if (active || snoozed.current) return;
-    const action = REENGAGE_BY_PATH[pathname];
-    if (!action) return;
-    const target = steps.find((s) => s.requiredAction === action);
-    if (!target || isSatisfied(target, progress)) return;
-    const idx = steps.findIndex((s) => s.id === target.id);
-    // Intentional external-sync in response to navigation.
+    if (active || snoozed.current || completed) return;
+    const firstUnsatisfiedIdx = steps.findIndex((s) => !isSatisfied(s, progress));
+    if (firstUnsatisfiedIdx < 0) return;
+    const target = steps[firstUnsatisfiedIdx];
+    const onHome = pathname === "/app/home";
+    const onTargetTab = pathname === `/app/${target.tab}`;
+    if (!onHome && !onTargetTab) return;
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setStepIndex(idx);
+    setStepIndex(firstUnsatisfiedIdx);
     setActive(true);
-  }, [pathname, active, steps, progress]);
+  }, [pathname, active, completed, steps, progress]);
 
   const value: OnboardingContextValue = {
     active,

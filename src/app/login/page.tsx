@@ -33,7 +33,7 @@ export default function LoginPage() {
       return;
     }
 
-    router.push("/app/portfolio");
+    router.push("/app/home");
   }
 
   return (

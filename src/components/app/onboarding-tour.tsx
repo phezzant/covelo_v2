@@ -5,7 +5,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { useOnboarding } from "@/lib/onboarding/context";
 
 const TAB_PATH: Record<string, string> = {
-  portfolio: "/app/portfolio",
+  home: "/app/home",
   trade: "/app/trade",
   compete: "/app/compete",
   profile: "/app/profile",

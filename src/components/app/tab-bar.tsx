@@ -2,11 +2,11 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { TrendingUp, LineChart, Trophy, User } from "lucide-react";
+import { Home, LineChart, Trophy, User } from "lucide-react";
 import { useOnboarding } from "@/lib/onboarding/context";
 
 const TABS = [
-  { href: "/app/portfolio", label: "Portfolio", icon: TrendingUp },
+  { href: "/app/home", label: "Home", icon: Home },
   { href: "/app/trade", label: "Trade", icon: LineChart },
   { href: "/app/compete", label: "Compete", icon: Trophy },
   { href: "/app/profile", label: "Profile", icon: User },

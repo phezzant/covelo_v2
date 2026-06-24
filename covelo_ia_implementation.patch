@@ -1,0 +1,1132 @@
+diff --git a/src/app/app/home/page.tsx b/src/app/app/home/page.tsx
+new file mode 100644
+index 0000000..41f9f4e
+--- /dev/null
++++ b/src/app/app/home/page.tsx
+@@ -0,0 +1,81 @@
++import {
++  getCurrentUserContext,
++  getHoldingsWithInstruments,
++  getTeammateComparison,
++} from "@/lib/data/context";
++import { PortfolioSummary } from "@/components/app/portfolio-summary";
++import { HoldingsList } from "@/components/app/holdings-list";
++import { PartnerBanner } from "@/components/app/partner-banner";
++import { HomeCta } from "@/components/app/home-cta";
++import { ComparisonWidget } from "@/components/app/comparison-widget";
++import { OnboardingBanner } from "@/components/app/onboarding-banner";
++
++export default async function HomePage() {
++  const { profile, portfolio, activePartner, pendingPartner, partnerProfile, holdingsCount } =
++    await getCurrentUserContext();
++
++  const holdings = portfolio ? await getHoldingsWithInstruments(portfolio.id) : [];
++
++  const stockValue = holdings.reduce((sum, h) => sum + h.quantity * h.instruments.price, 0);
++  const costBasis = holdings.reduce((sum, h) => sum + h.quantity * h.avg_cost, 0);
++  const cashBalance = portfolio?.cash_balance ?? 0;
++  const totalValue = stockValue + cashBalance;
++  const totalPL = stockValue - costBasis;
++
++  // Teammate comparison only exists for linked accounts.
++  const comparison = activePartner ? await getTeammateComparison() : null;
++
++  const progress = {
++    hasHoldings: holdingsCount > 0,
++    profileComplete: Boolean(profile.display_name?.trim()),
++    hasPartnerInvite: Boolean(activePartner || pendingPartner),
++  };
++  const fullyOnboarded =
++    progress.hasHoldings && progress.profileComplete && progress.hasPartnerInvite;
++
++  const firstName = profile.display_name?.trim().split(" ")[0];
++
++  return (
++    <main className="max-w-3xl mx-auto px-4 sm:px-6 py-6">
++      <OnboardingBanner page="home" />
++
++      <PartnerBanner
++        role={profile.role}
++        displayName={profile.display_name ?? ""}
++        activePartner={activePartner}
++        pendingPartner={pendingPartner}
++        partnerName={partnerProfile?.display_name}
++      />
++
++      <h1 className="font-display text-3xl mt-6 mb-1">
++        {firstName ? `Welcome back, ${firstName}` : "Welcome to Covelo"}
++      </h1>
++      <p className="text-parchment-dim text-sm mb-6">Here&apos;s how your portfolio&apos;s doing.</p>
++
++      <div data-tour="portfolio-spotlight">
++        <PortfolioSummary
++          totalValue={totalValue}
++          stockValue={stockValue}
++          cashBalance={cashBalance}
++          totalPL={totalPL}
++        />
++        <HomeCta progress={progress} />
++      </div>
++
++      {comparison && (
++        <div className="mt-10">
++          <ComparisonWidget data={comparison} />
++        </div>
++      )}
++
++      <h2 className="font-display text-xl mt-10 mb-4">Your holdings</h2>
++      <HoldingsList holdings={holdings} />
++
++      {fullyOnboarded && !activePartner && (
++        <p className="text-xs text-ink-muted mt-8 text-center">
++          Your teammate hasn&apos;t joined yet — Compete &amp; Compare unlocks once they do.
++        </p>
++      )}
++    </main>
++  );
++}
+diff --git a/src/app/app/layout.tsx b/src/app/app/layout.tsx
+index 6d95913..83fbffb 100644
+--- a/src/app/app/layout.tsx
++++ b/src/app/app/layout.tsx
+@@ -9,7 +9,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
+ 
+   const progress = {
+     hasHoldings: holdingsCount > 0,
+-    profileComplete: Boolean(profile.username?.trim()),
++    profileComplete: Boolean(profile.display_name?.trim()),
+     hasPartnerInvite: Boolean(activePartner || pendingPartner),
+   };
+ 
+diff --git a/src/app/app/onboarding/page.tsx b/src/app/app/onboarding/page.tsx
+index 93f01e9..cc912ed 100644
+--- a/src/app/app/onboarding/page.tsx
++++ b/src/app/app/onboarding/page.tsx
+@@ -1,10 +1,10 @@
+ import { redirect } from "next/navigation";
+ 
+ // The guided tutorial is implemented as an overlay (OnboardingTour) inside
+-// the /app layout, not as its own page — it navigates the user between
+-// real tabs while spotlighting real CTAs. This route just sends people to
+-// the Portfolio tab, where the tour picks up automatically based on
++// the /app layout, not as its own page — it navigates the user between real
++// tabs while spotlighting real CTAs. This route just sends people to the Home
++// tab, where the tour picks up automatically based on
+ // profile.onboarding_completed / onboarding_step.
+ export default function OnboardingRedirect() {
+-  redirect("/app/portfolio");
++  redirect("/app/home");
+ }
+diff --git a/src/app/app/portfolio/page.tsx b/src/app/app/portfolio/page.tsx
+index caf393e..1d04563 100644
+--- a/src/app/app/portfolio/page.tsx
++++ b/src/app/app/portfolio/page.tsx
+@@ -1,53 +1,7 @@
+-import { getCurrentUserContext, getHoldingsWithInstruments } from "@/lib/data/context";
+-import { PortfolioSummary } from "@/components/app/portfolio-summary";
+-import { HoldingsList } from "@/components/app/holdings-list";
+-import { PartnerBanner } from "@/components/app/partner-banner";
+-import { PortfolioCta } from "@/components/app/portfolio-cta";
+-import { OnboardingBanner } from "@/components/app/onboarding-banner";
++import { redirect } from "next/navigation";
+ 
+-export default async function PortfolioPage() {
+-  const { profile, portfolio, activePartner, pendingPartner, partnerProfile } =
+-    await getCurrentUserContext();
+-
+-  const holdings = portfolio ? await getHoldingsWithInstruments(portfolio.id) : [];
+-
+-  const stockValue = holdings.reduce((sum, h) => sum + h.quantity * h.instruments.price, 0);
+-  const costBasis = holdings.reduce((sum, h) => sum + h.quantity * h.avg_cost, 0);
+-  const cashBalance = portfolio?.cash_balance ?? 0;
+-  const totalValue = stockValue + cashBalance;
+-  const totalPL = stockValue - costBasis;
+-
+-  const firstName = profile.display_name?.trim().split(" ")[0];
+-
+-  return (
+-    <main className="max-w-3xl mx-auto px-4 sm:px-6 py-6">
+-      <OnboardingBanner page="portfolio" />
+-
+-      <PartnerBanner
+-        role={profile.role}
+-        displayName={profile.display_name ?? ""}
+-        activePartner={activePartner}
+-        pendingPartner={pendingPartner}
+-        partnerName={partnerProfile?.display_name}
+-      />
+-
+-      <h1 className="font-display text-3xl mt-6 mb-1">
+-        {firstName ? `Welcome back, ${firstName}` : "Welcome to Covelo"}
+-      </h1>
+-      <p className="text-parchment-dim text-sm mb-6">Here&apos;s how your portfolio&apos;s doing.</p>
+-
+-      <div data-tour="portfolio-spotlight">
+-        <PortfolioSummary
+-          totalValue={totalValue}
+-          stockValue={stockValue}
+-          cashBalance={cashBalance}
+-          totalPL={totalPL}
+-        />
+-        <PortfolioCta hasHoldings={holdings.length > 0} />
+-      </div>
+-
+-      <h2 className="font-display text-xl mt-10 mb-4">Your holdings</h2>
+-      <HoldingsList holdings={holdings} />
+-    </main>
+-  );
++// The Portfolio tab was folded into Home (its holdings are the spine of Home).
++// Preserve old links/bookmarks.
++export default function PortfolioRedirect() {
++  redirect("/app/home");
+ }
+diff --git a/src/app/app/profile/page.tsx b/src/app/app/profile/page.tsx
+index ba377a3..0aa8403 100644
+--- a/src/app/app/profile/page.tsx
++++ b/src/app/app/profile/page.tsx
+@@ -1,5 +1,6 @@
+ import { getCurrentUserContext } from "@/lib/data/context";
+ import { PartnerSection } from "@/components/app/partner-section";
++import { ProfileSetup } from "@/components/app/profile-setup";
+ import { LogoutButton } from "@/components/app/logout-button";
+ import { RestartTourButton } from "@/components/app/restart-tour-button";
+ import { OnboardingBanner } from "@/components/app/onboarding-banner";
+@@ -22,9 +23,16 @@ export default async function ProfilePage() {
+ 
+       <h1 className="font-display text-3xl mb-1">My Profile</h1>
+       <p className="text-parchment-dim text-sm mb-8">
+-        Manage your teammate and account.
++        Manage your profile, teammate, and account.
+       </p>
+ 
++      <p className="font-mono text-xs uppercase tracking-[0.15em] text-gold mb-3">
++        You
++      </p>
++      <div className="mb-10">
++        <ProfileSetup profile={profile} />
++      </div>
++
+       <p className="font-mono text-xs uppercase tracking-[0.15em] text-gold mb-3">
+         Teammate
+       </p>
+@@ -41,10 +49,6 @@ export default async function ProfilePage() {
+         <p className="font-mono text-xs uppercase tracking-[0.15em] text-ink-muted mb-3">
+           Account
+         </p>
+-        <div className="flex items-center justify-between bg-ink-light rounded-xl border border-parchment/10 px-4 py-3.5 mb-3">
+-          <span className="text-sm text-parchment-dim">Name</span>
+-          <span className="text-sm font-medium">{profile.display_name ?? "Not set"}</span>
+-        </div>
+         <div className="flex items-center justify-between bg-ink-light rounded-xl border border-parchment/10 px-4 py-3.5 mb-3">
+           <span className="text-sm text-parchment-dim">Role</span>
+           <span className="text-sm font-medium capitalize">{profile.role}</span>
+diff --git a/src/app/login/page.tsx b/src/app/login/page.tsx
+index 561ff21..00f098a 100644
+--- a/src/app/login/page.tsx
++++ b/src/app/login/page.tsx
+@@ -33,7 +33,7 @@ export default function LoginPage() {
+       return;
+     }
+ 
+-    router.push("/app/portfolio");
++    router.push("/app/home");
+   }
+ 
+   return (
+diff --git a/src/components/app/comparison-widget.tsx b/src/components/app/comparison-widget.tsx
+new file mode 100644
+index 0000000..dd29811
+--- /dev/null
++++ b/src/components/app/comparison-widget.tsx
+@@ -0,0 +1,150 @@
++import { TrendingUp, TrendingDown } from "lucide-react";
++import type { TeammateComparison } from "@/lib/data/context";
++
++function fmt(n: number) {
++  return n.toLocaleString("en-AU", {
++    style: "currency",
++    currency: "AUD",
++    maximumFractionDigits: 0,
++  });
++}
++
++function fmtSigned(n: number) {
++  const s = n.toLocaleString("en-AU", {
++    style: "currency",
++    currency: "AUD",
++    maximumFractionDigits: 0,
++  });
++  return n >= 0 ? `+${s}` : s;
++}
++
++/**
++ * Home-tab "you vs. teammate" widget. Rendered only when the account is linked.
++ * Framing is deliberately progress-first, not rank-first: when the user is
++ * behind we lead with their own gain and the size of the gap as something to
++ * close, never a bare "you're losing" verdict.
++ */
++export function ComparisonWidget({ data }: { data: TeammateComparison }) {
++  const { me, partner, partnerName, partnerAvatar, valueLead } = data;
++  const ahead = valueLead >= 0;
++  const gap = Math.abs(valueLead);
++
++  const headline = ahead
++    ? gap < 1
++      ? "You're neck and neck"
++      : `You're ahead by ${fmt(gap)}`
++    : `${fmt(gap)} to catch ${partnerName}`;
++
++  return (
++    <section className="mb-8">
++      <p className="font-mono text-xs uppercase tracking-[0.15em] text-gold mb-3">
++        You vs. {partnerName}
++      </p>
++
++      <div className="bg-ink-light border border-gold/20 rounded-2xl p-5">
++        <div className="flex items-center justify-between mb-4">
++          <p className="font-display text-lg">{headline}</p>
++          <span
++            className={`flex items-center gap-1 font-mono text-xs ${
++              ahead ? "text-gain" : "text-loss"
++            }`}
++          >
++            {ahead ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
++            {fmtSigned(valueLead)}
++          </span>
++        </div>
++
++        <div className="grid grid-cols-2 gap-3">
++          <div className="bg-ink rounded-xl border border-gold/30 p-4">
++            <p className="text-xs text-ink-muted mb-1">You</p>
++            <p className="font-mono text-lg leading-tight">{fmt(me.totalValue)}</p>
++            <p
++              className={`font-mono text-xs mt-1 ${
++                me.totalPL >= 0 ? "text-gain" : "text-loss"
++              }`}
++            >
++              {fmtSigned(me.totalPL)} P&amp;L
++            </p>
++          </div>
++          <div className="bg-ink rounded-xl border border-parchment/10 p-4">
++            <p className="text-xs text-ink-muted mb-1">
++              <span className="mr-1">{partnerAvatar}</span>
++              {partnerName}
++            </p>
++            <p className="font-mono text-lg leading-tight">{fmt(partner.totalValue)}</p>
++            <p
++              className={`font-mono text-xs mt-1 ${
++                partner.totalPL >= 0 ? "text-gain" : "text-loss"
++              }`}
++            >
++              {fmtSigned(partner.totalPL)} P&amp;L
++            </p>
++          </div>
++        </div>
++
++        {(me.topHolding || partner.topHolding) && (
++          <div className="mt-4 pt-4 border-t border-parchment/10 grid grid-cols-2 gap-3 text-xs">
++            <div>
++              <p className="text-ink-muted mb-1">Your best pick</p>
++              {me.topHolding ? (
++                <p>
++                  <span className="mr-1">{me.topHolding.emoji}</span>
++                  {me.topHolding.name}{" "}
++                  <span className={me.topHolding.pl >= 0 ? "text-gain" : "text-loss"}>
++                    ({fmtSigned(me.topHolding.pl)})
++                  </span>
++                </p>
++              ) : (
++                <p className="text-ink-muted">Nothing yet</p>
++              )}
++            </div>
++            <div>
++              <p className="text-ink-muted mb-1">{partnerName}&apos;s best pick</p>
++              {partner.topHolding ? (
++                <p>
++                  <span className="mr-1">{partner.topHolding.emoji}</span>
++                  {partner.topHolding.name}{" "}
++                  <span className={partner.topHolding.pl >= 0 ? "text-gain" : "text-loss"}>
++                    ({fmtSigned(partner.topHolding.pl)})
++                  </span>
++                </p>
++              ) : (
++                <p className="text-ink-muted">Nothing yet</p>
++              )}
++            </div>
++          </div>
++        )}
++
++        {data.partnerHoldings.length > 0 && (
++          <details className="mt-4 group">
++            <summary className="cursor-pointer text-xs text-gold hover:underline list-none">
++              View {partnerName}&apos;s portfolio →
++            </summary>
++            <div className="mt-3 flex flex-col gap-2">
++              {data.partnerHoldings.map((h) => {
++                const pl = h.quantity * (h.instruments.price - h.avg_cost);
++                return (
++                  <div
++                    key={h.id}
++                    className="flex items-center justify-between bg-ink rounded-lg border border-parchment/10 px-3 py-2.5"
++                  >
++                    <div className="flex items-center gap-2">
++                      <span className="text-lg">{h.instruments.logo_emoji}</span>
++                      <div>
++                        <p className="text-sm">{h.instruments.name}</p>
++                        <p className="text-xs text-ink-muted">{h.instruments.ticker}</p>
++                      </div>
++                    </div>
++                    <p className={`font-mono text-xs ${pl >= 0 ? "text-gain" : "text-loss"}`}>
++                      {fmtSigned(pl)}
++                    </p>
++                  </div>
++                );
++              })}
++            </div>
++          </details>
++        )}
++      </div>
++    </section>
++  );
++}
+diff --git a/src/components/app/home-cta.tsx b/src/components/app/home-cta.tsx
+new file mode 100644
+index 0000000..388ddd1
+--- /dev/null
++++ b/src/components/app/home-cta.tsx
+@@ -0,0 +1,64 @@
++"use client";
++
++import { useRouter } from "next/navigation";
++import { ArrowRight } from "lucide-react";
++import { useOnboarding } from "@/lib/onboarding/context";
++
++type Progress = {
++  hasHoldings: boolean;
++  profileComplete: boolean;
++  hasPartnerInvite: boolean;
++};
++
++/**
++ * The Home tab's primary "root" navigation CTA. Its label and destination
++ * reflect the single most important next action for the user, per the IA's
++ * priority order: buy a stock → finish profile → invite teammate → (done) trade.
++ *
++ * This doubles as drop-out recovery: a user who abandoned onboarding and lands
++ * back on Home always sees — and is one tap from — the step they still owe.
++ */
++export function HomeCta({ progress }: { progress: Progress }) {
++  const router = useRouter();
++  const { fire, active, step } = useOnboarding();
++
++  let label: string;
++  let href: string;
++  let action: string | null;
++
++  if (!progress.hasHoldings) {
++    label = "Buy your first stock";
++    href = "/app/trade";
++    action = "goto-trade";
++  } else if (!progress.profileComplete) {
++    label = "Finish your profile";
++    href = "/app/profile";
++    action = null;
++  } else if (!progress.hasPartnerInvite) {
++    label = "Invite your teammate";
++    href = "/app/profile";
++    action = null;
++  } else {
++    label = "Trade stocks";
++    href = "/app/trade";
++    action = null;
++  }
++
++  function handleClick() {
++    if (action) fire(action); // advances onboarding step 1 if active; no-op otherwise
++    router.push(href);
++  }
++
++  const isHighlighted = active && step?.anchor === "[data-tour='home-cta']";
++
++  return (
++    <button
++      data-tour="home-cta"
++      onClick={handleClick}
++      className={`mt-4 w-full flex items-center justify-center gap-2 bg-gold text-ink font-semibold py-3.5 rounded-full hover:bg-gold/90 transition-colors text-sm shadow-lg shadow-gold/20 ${isHighlighted ? "gold-ring-pulse" : ""}`}
++    >
++      {label}
++      <ArrowRight size={16} />
++    </button>
++  );
++}
+diff --git a/src/components/app/invite-partner-overlay.tsx b/src/components/app/invite-partner-overlay.tsx
+index 8620d64..67dcc8b 100644
+--- a/src/components/app/invite-partner-overlay.tsx
++++ b/src/components/app/invite-partner-overlay.tsx
+@@ -108,7 +108,7 @@ export function InvitePartnerOverlay({
+       <p className="text-parchment-dim text-sm mb-6">
+         {isChild
+           ? "Who will be your teammate? They need to be 18 or older — Mum, Dad, or another grown-up you trust is usually the best choice."
+-          : `${ownName || "You"}, who's the child you'd like to bring along on Covelo?`}
++          : "Who do you want to bring on this journey? Add their name and email and we'll send them an invite to be your teammate."}
+       </p>
+       {error && (
+         <p className="text-loss text-sm mb-4 bg-loss/10 border border-loss/20 rounded-lg px-4 py-2.5">
+diff --git a/src/components/app/onboarding-banner.tsx b/src/components/app/onboarding-banner.tsx
+index 0222666..623ba50 100644
+--- a/src/components/app/onboarding-banner.tsx
++++ b/src/components/app/onboarding-banner.tsx
+@@ -10,7 +10,7 @@ import { useOnboarding } from "@/lib/onboarding/context";
+ export function OnboardingBanner({
+   page,
+ }: {
+-  page: "portfolio" | "trade" | "compete" | "profile";
++  page: "home" | "trade" | "compete" | "profile";
+ }) {
+   const { active, step, stepNumber, totalSteps } = useOnboarding();
+   if (!active || !step || step.tab !== page || !step.inline) return null;
+diff --git a/src/components/app/onboarding-tour.tsx b/src/components/app/onboarding-tour.tsx
+index c867d31..2340bb2 100644
+--- a/src/components/app/onboarding-tour.tsx
++++ b/src/components/app/onboarding-tour.tsx
+@@ -5,7 +5,7 @@ import { useRouter, usePathname } from "next/navigation";
+ import { useOnboarding } from "@/lib/onboarding/context";
+ 
+ const TAB_PATH: Record<string, string> = {
+-  portfolio: "/app/portfolio",
++  home: "/app/home",
+   trade: "/app/trade",
+   compete: "/app/compete",
+   profile: "/app/profile",
+diff --git a/src/components/app/portfolio-cta.tsx b/src/components/app/portfolio-cta.tsx
+deleted file mode 100644
+index 24238a4..0000000
+--- a/src/components/app/portfolio-cta.tsx
++++ /dev/null
+@@ -1,35 +0,0 @@
+-"use client";
+-
+-import { useRouter } from "next/navigation";
+-import { ArrowRight } from "lucide-react";
+-import { useOnboarding } from "@/lib/onboarding/context";
+-
+-/**
+- * The Portfolio tab's primary "root" navigation CTA. It's dynamic: the label
+- * reflects the most important next action for the user. During onboarding it's
+- * the spotlight target and advances the flow when tapped.
+- */
+-export function PortfolioCta({ hasHoldings }: { hasHoldings: boolean }) {
+-  const router = useRouter();
+-  const { fire, active, step } = useOnboarding();
+-
+-  const label = hasHoldings ? "Trade stocks" : "Buy your first stock";
+-
+-  function handleClick() {
+-    fire("goto-trade"); // advances onboarding step 1 if active; no-op otherwise
+-    router.push("/app/trade");
+-  }
+-
+-  const isHighlighted = active && step?.anchor === "[data-tour='portfolio-cta']";
+-
+-  return (
+-    <button
+-      data-tour="portfolio-cta"
+-      onClick={handleClick}
+-      className={`mt-4 w-full flex items-center justify-center gap-2 bg-gold text-ink font-semibold py-3.5 rounded-full hover:bg-gold/90 transition-colors text-sm shadow-lg shadow-gold/20 ${isHighlighted ? "gold-ring-pulse" : ""}`}
+-    >
+-      {label}
+-      <ArrowRight size={16} />
+-    </button>
+-  );
+-}
+diff --git a/src/components/app/profile-setup.tsx b/src/components/app/profile-setup.tsx
+new file mode 100644
+index 0000000..5250153
+--- /dev/null
++++ b/src/components/app/profile-setup.tsx
+@@ -0,0 +1,101 @@
++"use client";
++
++import { useState } from "react";
++import { useRouter } from "next/navigation";
++import { createClient } from "@/lib/supabase/client";
++import { useOnboarding } from "@/lib/onboarding/context";
++import type { Profile } from "@/types/database";
++
++const EMOJI_OPTIONS = ["🦊", "🐯", "🦁", "🐼", "🦉", "🐺", "🦅", "🐢", "🦈", "🐬"];
++
++/**
++ * Captures the user's own name (display_name) and avatar. This is the identity
++ * the user and their teammate see — distinct from the leaderboard username,
++ * which is set later on the Compete tab (paid tier). Firing `save-profile`
++ * advances the onboarding profile step.
++ */
++export function ProfileSetup({ profile }: { profile: Profile }) {
++  const router = useRouter();
++  const supabase = createClient();
++  const { fire } = useOnboarding();
++
++  const [emoji, setEmoji] = useState(profile.avatar_emoji);
++  const [name, setName] = useState(profile.display_name ?? "");
++  const [saving, setSaving] = useState(false);
++  const [saved, setSaved] = useState(false);
++  const [error, setError] = useState<string | null>(null);
++
++  const canSave = name.trim().length > 0;
++
++  async function handleSave() {
++    if (!canSave) {
++      setError("Please enter your name.");
++      return;
++    }
++    setError(null);
++    setSaving(true);
++    setSaved(false);
++    const { error: saveError } = await supabase
++      .from("profiles")
++      .update({ avatar_emoji: emoji, display_name: name.trim() })
++      .eq("id", profile.id);
++    setSaving(false);
++    if (saveError) {
++      setError(saveError.message);
++      return;
++    }
++    setSaved(true);
++    router.refresh();
++    fire("save-profile");
++    setTimeout(() => setSaved(false), 2000);
++  }
++
++  return (
++    <div
++      data-tour="profile-setup"
++      className="bg-ink-light border border-parchment/10 rounded-2xl p-6"
++    >
++      <p className="text-sm text-parchment-dim mb-3">Choose an avatar</p>
++      <div className="grid grid-cols-5 gap-2 mb-6">
++        {EMOJI_OPTIONS.map((e) => (
++          <button
++            key={e}
++            onClick={() => setEmoji(e)}
++            className={`text-2xl py-2.5 rounded-xl border transition-colors ${
++              emoji === e ? "border-gold bg-gold/10" : "border-parchment/10 hover:border-parchment/25"
++            }`}
++            aria-label={`Choose ${e} as avatar`}
++          >
++            {e}
++          </button>
++        ))}
++      </div>
++
++      <label htmlFor="display-name" className="block text-sm text-parchment-dim mb-1.5">
++        Your name
++      </label>
++      <input
++        id="display-name"
++        type="text"
++        value={name}
++        onChange={(e) => setName(e.target.value)}
++        placeholder="What should we call you?"
++        className="w-full bg-ink border border-parchment/15 rounded-lg px-4 py-2.5 text-parchment placeholder:text-ink-muted focus:outline-none focus:ring-2 focus:ring-gold/50 focus:border-gold/50 transition-colors mb-4"
++      />
++
++      {error && (
++        <p className="text-loss text-sm mb-4 bg-loss/10 border border-loss/20 rounded-lg px-4 py-2.5">
++          {error}
++        </p>
++      )}
++
++      <button
++        onClick={handleSave}
++        disabled={saving}
++        className="bg-gold text-ink font-semibold px-6 py-2.5 rounded-full hover:bg-gold/90 transition-colors text-sm disabled:opacity-50"
++      >
++        {saving ? "Saving…" : saved ? "Saved ✓" : "Save changes"}
++      </button>
++    </div>
++  );
++}
+diff --git a/src/components/app/tab-bar.tsx b/src/components/app/tab-bar.tsx
+index 08c52a7..be4505d 100644
+--- a/src/components/app/tab-bar.tsx
++++ b/src/components/app/tab-bar.tsx
+@@ -2,11 +2,11 @@
+ 
+ import Link from "next/link";
+ import { usePathname } from "next/navigation";
+-import { TrendingUp, LineChart, Trophy, User } from "lucide-react";
++import { Home, LineChart, Trophy, User } from "lucide-react";
+ import { useOnboarding } from "@/lib/onboarding/context";
+ 
+ const TABS = [
+-  { href: "/app/portfolio", label: "Portfolio", icon: TrendingUp },
++  { href: "/app/home", label: "Home", icon: Home },
+   { href: "/app/trade", label: "Trade", icon: LineChart },
+   { href: "/app/compete", label: "Compete", icon: Trophy },
+   { href: "/app/profile", label: "Profile", icon: User },
+diff --git a/src/components/app/trade-overlay.tsx b/src/components/app/trade-overlay.tsx
+index 6784ed5..1d73605 100644
+--- a/src/components/app/trade-overlay.tsx
++++ b/src/components/app/trade-overlay.tsx
+@@ -59,7 +59,7 @@ export function TradeOverlay({
+ }) {
+   const router = useRouter();
+   const supabase = createClient();
+-  const { active, step, fire, back } = useOnboarding();
++  const { active, role, step, fire, back } = useOnboarding();
+ 
+   // Onboarding buy step: guide the first purchase.
+   const guidingBuy = active && step?.requiredAction === "confirm-buy";
+@@ -183,6 +183,8 @@ export function TradeOverlay({
+ 
+   // Onboarding celebration screen.
+   if (confirmed && celebrate) {
++    const isChild = role === "child";
++    const ctaLabel = isChild ? "Set up profile" : "Finish";
+     return (
+       <Overlay onClose={() => {}} title="Purchase complete" hideClose>
+         <div className="relative text-center py-4">
+@@ -194,18 +196,20 @@ export function TradeOverlay({
+             <span className="font-semibold">{instrument.name}</span>.
+           </p>
+           <p className="text-parchment-dim text-sm mb-6">
+-            A portfolio usually means owning shares in lots of different companies, not just one — so
+-            come back later and buy some more with the cash you&apos;ve got. But for now, let&apos;s
+-            set up your profile.
++            {isChild
++              ? "A portfolio usually means owning shares in lots of different companies, not just one — so come back later and buy some more with the cash you've got. But for now, let's set up your profile."
++              : "A portfolio usually means owning shares in lots of different companies — come back any time to keep building yours and mentoring your teammate."}
+           </p>
+           <button
+             onClick={() => {
+-              fire("goto-profile-setup");
++              // Advance whatever the live celebration step is:
++              // child → to-profile-setup, adult → to-finish.
++              fire(step?.requiredAction ?? "to-profile-setup");
+               onClose();
+             }}
+             className="bg-gold text-ink font-semibold px-6 py-2.5 rounded-full hover:bg-gold/90 transition-colors text-sm"
+           >
+-            Set up profile
++            {ctaLabel}
+           </button>
+         </div>
+       </Overlay>
+diff --git a/src/lib/data/context.ts b/src/lib/data/context.ts
+index eb058c8..5c10ed3 100644
+--- a/src/lib/data/context.ts
++++ b/src/lib/data/context.ts
+@@ -92,3 +92,101 @@ export async function getAllInstruments() {
+   const { data } = await supabase.from("instruments").select("*").order("ticker");
+   return data ?? [];
+ }
++
++export type PortfolioStats = {
++  totalValue: number;
++  stockValue: number;
++  cashBalance: number;
++  totalPL: number;
++  topHolding: { name: string; emoji: string; pl: number } | null;
++};
++
++function statsFromHoldings(
++  holdings: HoldingWithInstrument[],
++  cashBalance: number
++): PortfolioStats {
++  const stockValue = holdings.reduce((s, h) => s + h.quantity * h.instruments.price, 0);
++  const costBasis = holdings.reduce((s, h) => s + h.quantity * h.avg_cost, 0);
++  let topHolding: PortfolioStats["topHolding"] = null;
++  for (const h of holdings) {
++    const pl = h.quantity * (h.instruments.price - h.avg_cost);
++    if (!topHolding || pl > topHolding.pl) {
++      topHolding = { name: h.instruments.name, emoji: h.instruments.logo_emoji, pl };
++    }
++  }
++  return {
++    totalValue: stockValue + cashBalance,
++    stockValue,
++    cashBalance,
++    totalPL: stockValue - costBasis,
++    topHolding,
++  };
++}
++
++export type TeammateComparison = {
++  me: PortfolioStats;
++  partner: PortfolioStats;
++  partnerName: string;
++  partnerAvatar: string;
++  /** Positive when the current user is ahead by total value. */
++  valueLead: number;
++  partnerHoldings: HoldingWithInstrument[];
++};
++
++/**
++ * Comparison data for the Home-tab teammate widget. Only meaningful for linked
++ * accounts; returns null otherwise. The partner-portfolio reads rely on the
++ * "view partner's portfolio/holdings" RLS policies (status = 'active'), which
++ * already exist in 0001_init.sql — no extra migration needed.
++ */
++export async function getTeammateComparison(): Promise<TeammateComparison | null> {
++  const supabase = await createClient();
++  const { data: userData } = await supabase.auth.getUser();
++  const user = userData.user;
++  if (!user) return null;
++
++  const { data: profile } = await supabase
++    .from("profiles")
++    .select("*")
++    .eq("id", user.id)
++    .single();
++  if (!profile) return null;
++
++  const { data: partnerRows } = await supabase
++    .from("journey_partner")
++    .select("*")
++    .or(`adult_id.eq.${user.id},child_id.eq.${user.id}`)
++    .eq("status", "active")
++    .limit(1);
++  const active = partnerRows?.[0];
++  if (!active) return null;
++
++  const partnerId = profile.role === "child" ? active.adult_id : active.child_id;
++  if (!partnerId) return null;
++
++  const [{ data: myPortfolio }, { data: partnerProfile }, { data: partnerPortfolio }] =
++    await Promise.all([
++      supabase.from("portfolios").select("*").eq("profile_id", user.id).single(),
++      supabase.from("profiles").select("*").eq("id", partnerId).single(),
++      supabase.from("portfolios").select("*").eq("profile_id", partnerId).single(),
++    ]);
++
++  if (!myPortfolio || !partnerPortfolio || !partnerProfile) return null;
++
++  const [myHoldings, partnerHoldings] = await Promise.all([
++    getHoldingsWithInstruments(myPortfolio.id),
++    getHoldingsWithInstruments(partnerPortfolio.id),
++  ]);
++
++  const me = statsFromHoldings(myHoldings, myPortfolio.cash_balance);
++  const partner = statsFromHoldings(partnerHoldings, partnerPortfolio.cash_balance);
++
++  return {
++    me,
++    partner,
++    partnerName: partnerProfile.display_name ?? partnerProfile.username ?? "Your teammate",
++    partnerAvatar: partnerProfile.avatar_emoji,
++    valueLead: me.totalValue - partner.totalValue,
++    partnerHoldings,
++  };
++}
+diff --git a/src/lib/onboarding/context.tsx b/src/lib/onboarding/context.tsx
+index 9ae7d2a..dc3b53d 100644
+--- a/src/lib/onboarding/context.tsx
++++ b/src/lib/onboarding/context.tsx
+@@ -58,32 +58,29 @@ export function useOnboarding(): OnboardingContextValue {
+   return ctx;
+ }
+ 
+-// Whether a step's underlying task is already done, per real app state.
++// Whether a step's underlying task is already done, per real app state. This is
++// what lets us (a) resume a dropped-out user at the first incomplete step and
++// (b) skip steps that don't apply — e.g. an adult who arrived via an invite is
++// already linked, so the "invite teammate" step is satisfied and skipped.
+ function isSatisfied(step: OnboardingStep, p: OnboardingProgress): boolean {
+   switch (step.requiredAction) {
+     case "goto-trade":
+     case "select-pick":
+     case "confirm-buy":
+-    case "goto-profile-setup":
++    case "to-profile-setup":
++    case "to-finish":
+       return p.hasHoldings; // the whole buy-flow is one task
+     case "save-profile":
+       return p.profileComplete;
+     case "send-invite":
+       return p.hasPartnerInvite;
++    // Welcome / finish cards always require an explicit tap; never auto-skipped.
+     case "continue":
+-      return p.hasHoldings && p.profileComplete && p.hasPartnerInvite;
+     default:
+       return false;
+   }
+ }
+ 
+-// Tabs that may re-arm the tour when opened with their task incomplete.
+-// Note the swap: profile setup lives on /compete, invite lives on /profile.
+-const REENGAGE_BY_PATH: Record<string, string> = {
+-  "/app/compete": "save-profile",
+-  "/app/profile": "send-invite",
+-};
+-
+ export function OnboardingProvider({
+   role,
+   completed,
+@@ -101,6 +98,12 @@ export function OnboardingProvider({
+ 
+   const steps = useMemo(() => getOnboardingSteps(role), [role]);
+ 
++  // Keep latest progress reachable inside callbacks without re-creating them.
++  const progressRef = useRef(progress);
++  useEffect(() => {
++    progressRef.current = progress;
++  }, [progress]);
++
+   const smartStartIndex = useMemo(() => {
+     const idx = steps.findIndex((s) => !isSatisfied(s, progress));
+     return idx >= 0 ? idx : steps.length - 1;
+@@ -135,7 +138,16 @@ export function OnboardingProvider({
+ 
+   const advance = useCallback(() => {
+     setStepIndex((prev) => {
+-      const next = prev + 1;
++      let next = prev + 1;
++      // Skip any forthcoming steps whose task is already done (e.g. a linked
++      // adult skips the invite step), but never skip a terminal card.
++      while (
++        next < steps.length &&
++        !steps[next].terminal &&
++        isSatisfied(steps[next], progressRef.current)
++      ) {
++        next += 1;
++      }
+       if (next >= steps.length) {
+         setActive(false);
+         void persist(steps[steps.length - 1].id, true);
+@@ -192,19 +204,22 @@ export function OnboardingProvider({
+     [active, step]
+   );
+ 
+-  // Criteria-driven re-engagement on tab open (unless snoozed this session).
++  // Drop-out recovery. If the user abandoned the flow without finishing (and
++  // didn't explicitly skip — `completed` stays false in that case), landing on
++  // the Home tab re-arms the tour at the first incomplete step, which then
++  // navigates them onward. Direct visits to a step's own tab re-arm too.
+   useEffect(() => {
+-    if (active || snoozed.current) return;
+-    const action = REENGAGE_BY_PATH[pathname];
+-    if (!action) return;
+-    const target = steps.find((s) => s.requiredAction === action);
+-    if (!target || isSatisfied(target, progress)) return;
+-    const idx = steps.findIndex((s) => s.id === target.id);
+-    // Intentional external-sync in response to navigation.
++    if (active || snoozed.current || completed) return;
++    const firstUnsatisfiedIdx = steps.findIndex((s) => !isSatisfied(s, progress));
++    if (firstUnsatisfiedIdx < 0) return;
++    const target = steps[firstUnsatisfiedIdx];
++    const onHome = pathname === "/app/home";
++    const onTargetTab = pathname === `/app/${target.tab}`;
++    if (!onHome && !onTargetTab) return;
+     // eslint-disable-next-line react-hooks/set-state-in-effect
+-    setStepIndex(idx);
++    setStepIndex(firstUnsatisfiedIdx);
+     setActive(true);
+-  }, [pathname, active, steps, progress]);
++  }, [pathname, active, completed, steps, progress]);
+ 
+   const value: OnboardingContextValue = {
+     active,
+diff --git a/src/lib/onboarding/steps.ts b/src/lib/onboarding/steps.ts
+index 857e446..625e800 100644
+--- a/src/lib/onboarding/steps.ts
++++ b/src/lib/onboarding/steps.ts
+@@ -1,9 +1,11 @@
+ import type { UserRole } from "@/types/database";
+ 
++export type OnboardingTab = "home" | "trade" | "compete" | "profile";
++
+ export type OnboardingStep = {
+   id: number;
+   /** Which tab/route this step belongs to. */
+-  tab: "portfolio" | "trade" | "compete" | "profile";
++  tab: OnboardingTab;
+   title: string;
+   body: string;
+   /** Logical action that advances this step (fired by a real UI control). */
+@@ -25,10 +27,16 @@ export type OnboardingStep = {
+   showContinue?: boolean;
+ };
+ 
++// ── Child journey ──────────────────────────────────────────────────────────
++// Home (welcome + $10k) → Trade (top picks) → buy → celebrate →
++// Profile (own name + avatar) → Profile (invite teammate) → done.
++// Note the deliberate change from the earlier flow: the Compete tab is NOT part
++// of onboarding. Leaderboard identity / competing sits behind the paid tier and
++// is only surfaced to fully-onboarded users.
+ const CHILD_STEPS: OnboardingStep[] = [
+   {
+     id: 1,
+-    tab: "portfolio",
++    tab: "home",
+     title: "Welcome to Covelo",
+     body:
+       "This is your home base — a snapshot of everything you own and how it's doing. " +
+@@ -36,7 +44,7 @@ const CHILD_STEPS: OnboardingStep[] = [
+       "Let's fix that. Tap the gold button to go buy your first stock.",
+     requiredAction: "goto-trade",
+     allow: [],
+-    anchor: "[data-tour='portfolio-cta']",
++    anchor: "[data-tour='home-cta']",
+     inline: true,
+   },
+   {
+@@ -44,9 +52,9 @@ const CHILD_STEPS: OnboardingStep[] = [
+     tab: "trade",
+     title: "This is the Trade tab",
+     body:
+-      "This is where you research companies and decide which ones you want to buy and sell. " +
+-      "Below are the Top Picks — the hottest companies right now, the ones other people are " +
+-      "buying. Have a look and pick one you'd like to own a piece of.",
++      "This is where you find companies to buy. Below are the Top Picks — the hottest " +
++      "companies right now, the ones other people are buying. Have a look and pick one " +
++      "you'd like to own a piece of.",
+     requiredAction: "select-pick",
+     allow: [],
+     anchor: "[data-tour='top-picks']",
+@@ -54,7 +62,6 @@ const CHILD_STEPS: OnboardingStep[] = [
+   },
+   {
+     id: 3,
+-    // Buy form — rendered inside the trade overlay.
+     tab: "trade",
+     title: "Buy your first shares",
+     body:
+@@ -66,25 +73,22 @@ const CHILD_STEPS: OnboardingStep[] = [
+   },
+   {
+     id: 4,
+-    // Celebration — rendered inside the trade overlay.
+     tab: "trade",
+     title: "You're an investor now!",
+     body: "Congratulations — you own your first piece of a company.",
+-    requiredAction: "goto-profile-setup",
++    requiredAction: "to-profile-setup",
+     inOverlay: true,
+-    terminal: true,
+   },
+   {
+     id: 5,
+-    tab: "compete",
++    tab: "profile",
+     title: "Set up your profile",
+     body:
+-      "Covelo is all about competing with friends and family — whoever makes the most money " +
+-      "wins. Before you compete, set up how you'll appear to everyone else. Pick an avatar and " +
+-      "a leaderboard username, then save.",
++      "Add your name and pick an avatar — this is you. Your name is just for you and your " +
++      "teammate; it isn't shown on any public leaderboard. Save when you're done.",
+     requiredAction: "save-profile",
+     allow: ["edit-profile"],
+-    anchor: "[data-tour='profile-editor']",
++    anchor: "[data-tour='profile-setup']",
+     inline: true,
+   },
+   {
+@@ -102,7 +106,7 @@ const CHILD_STEPS: OnboardingStep[] = [
+   },
+   {
+     id: 7,
+-    tab: "portfolio",
++    tab: "home",
+     title: "You're all set",
+     body:
+       "You've bought your first stock, set up your profile, and invited your teammate. " +
+@@ -113,50 +117,73 @@ const CHILD_STEPS: OnboardingStep[] = [
+   },
+ ];
+ 
++// ── Adult journey ──────────────────────────────────────────────────────────
++// Priority is linking the account; trading is secondary. Welcome →
++// link teammate (invite OR — if they arrived via an invite and are already
++// linked — this step is auto-satisfied and skipped) → buy first stock → done.
+ const ADULT_STEPS: OnboardingStep[] = [
+   {
+     id: 1,
+-    tab: "portfolio",
++    tab: "home",
+     title: "Welcome to Covelo",
+     body:
+-      "You're here to help a child learn to invest — and you can play alongside them. This is " +
+-      "your home base, with your own $10,000 practice balance. Playing yourself is optional; " +
+-      "your main role is mentor.",
++      "Covelo is a trading game that helps you hone your investment skills. Learn how to " +
++      "trade in a real-world environment, put your strategies to the test with real market " +
++      "data, then compare your decisions with your teammate to see who comes out on top.",
+     requiredAction: "continue",
+     showContinue: true,
+-    anchor: "[data-tour='portfolio-cta']",
+   },
+   {
+-    id: 5,
+-    tab: "compete",
+-    title: "Set up your profile",
+-    body:
+-      "Pick an avatar and a leaderboard username — this is how your child will see you once " +
+-      "you're linked. Save when you're done.",
+-    requiredAction: "save-profile",
+-    allow: ["edit-profile"],
+-    anchor: "[data-tour='profile-editor']",
+-    inline: true,
+-  },
+-  {
+-    id: 6,
++    id: 2,
+     tab: "profile",
+-    title: "Invite your child",
++    title: "Bring your teammate on board",
+     body:
+-      "Bring your child onto Covelo so you can mentor them and unlock Compete & Compare " +
+-      "together. Add their name and email to send the invite.",
++      "The people closest to you will one day make financial decisions without you. Covelo " +
++      "gives you a way to be deliberate about that — invite someone now, and the game turns " +
++      "your real financial decisions into lessons they'll actually remember.",
+     requiredAction: "send-invite",
+     allow: ["open-invite"],
+     anchor: "[data-tour='invite-entry']",
+     inline: true,
+   },
+   {
+-    id: 7,
+-    tab: "portfolio",
++    id: 3,
++    tab: "trade",
++    title: "Now try it yourself",
++    body:
++      "The best way to mentor is to play alongside them. Below are the Top Picks — pick a " +
++      "company you'd like to own a piece of and place your first trade.",
++    requiredAction: "select-pick",
++    allow: [],
++    anchor: "[data-tour='top-picks']",
++    inline: true,
++  },
++  {
++    id: 4,
++    tab: "trade",
++    title: "Place your first trade",
++    body:
++      "The largest amount is already selected — tap Confirm buy, or choose a smaller amount " +
++      "first.",
++    requiredAction: "confirm-buy",
++    allow: ["pick-amount"],
++    inOverlay: true,
++  },
++  {
++    id: 5,
++    tab: "trade",
++    title: "You're trading now!",
++    body: "Nicely done — you've placed your first trade.",
++    requiredAction: "to-finish",
++    inOverlay: true,
++  },
++  {
++    id: 6,
++    tab: "home",
+     title: "You're all set",
+     body:
+-      "Once your child accepts, you'll see their progress here and Compete & Compare opens up " +
+-      "for both of you. Welcome to Covelo!",
++      "Once your teammate accepts, you'll see their progress here and Compete & Compare opens " +
++      "up for both of you. Welcome to Covelo!",
+     requiredAction: "continue",
+     showContinue: true,
+     terminal: true,

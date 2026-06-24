@@ -108,7 +108,7 @@ export function InvitePartnerOverlay({
       <p className="text-parchment-dim text-sm mb-6">
         {isChild
           ? "Who will be your teammate? They need to be 18 or older — Mum, Dad, or another grown-up you trust is usually the best choice."
-          : `${ownName || "You"}, who's the child you'd like to bring along on Covelo?`}
+          : "Who do you want to bring on this journey? Add their name and email and we'll send them an invite to be your teammate."}
       </p>
       {error && (
         <p className="text-loss text-sm mb-4 bg-loss/10 border border-loss/20 rounded-lg px-4 py-2.5">
