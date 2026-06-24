@@ -46,7 +46,7 @@ export function RoleSelector() {
         .from("journey_partner")
         .select("*")
         .is(matchColumn, null)
-        .eq("invited_email", user.email)
+        .ilike("invited_email", user.email)
         .eq("status", "pending")
         .limit(1)
         .maybeSingle();
@@ -83,15 +83,15 @@ export function RoleSelector() {
           className="flex flex-col items-center gap-2 border border-parchment/15 rounded-xl py-6 hover:border-gold/50 hover:bg-ink-light transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
         >
           <span className="text-3xl">🎮</span>
-          <span className="font-medium text-sm">I&apos;m the player</span>
+          <span className="font-medium text-sm">I&apos;m here to play</span>
         </button>
         <button
           disabled={loading}
           onClick={() => handleRoleSubmit("adult")}
           className="flex flex-col items-center gap-2 border border-parchment/15 rounded-xl py-6 hover:border-gold/50 hover:bg-ink-light transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
         >
-          <span className="text-3xl">🧑‍🏫</span>
-          <span className="font-medium text-sm">I&apos;m the partner</span>
+          <span className="text-3xl">🤝</span>
+          <span className="font-medium text-sm">I&apos;m here to help</span>
         </button>
       </div>
     </>

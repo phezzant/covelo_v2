@@ -9,6 +9,14 @@ import Link from "next/link";
 
 type Step = "account" | "confirm-email" | "role";
 
+const roleStepTitle = (
+  <>
+    <span className="block">Real stocks.</span>
+    <span className="block font-normal opacity-40">Practice money.</span>
+    <span className="block text-gold">Serious bragging rights.</span>
+  </>
+);
+
 export default function SignupPage() {
   const supabase = createClient();
 
@@ -71,13 +79,13 @@ export default function SignupPage() {
   if (step === "role") {
     return (
       <AuthShell
-        title="Welcome to Covelo"
-        subtitle="Covelo is a game where you learn to invest in real companies using practice money — alongside a teammate you trust, like a parent or your child."
+        title={roleStepTitle}
+        subtitle="Pick real stocks, build a portfolio, and go head to head with someone in your life — without risking a cent."
       >
         <div className="bg-ink-light border border-parchment/10 rounded-2xl p-5 mb-6">
           <p className="text-sm text-parchment-dim leading-relaxed">
-            You play as a pair: one of you is learning the ropes, the other is the trusted
-            grown-up helping out. To set you up the right way, just tell us which one you are.
+            You&apos;ll each manage your own portfolio, tracking the same market, competing for the
+            top spot. Which one are you?
           </p>
         </div>
         <RoleSelector />
