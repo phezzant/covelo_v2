@@ -1,9 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { Users, Clock, CheckCircle2 } from "lucide-react";
+import { Users, CheckCircle2 } from "lucide-react";
 import type { JourneyPartner, UserRole } from "@/types/database";
 import { InvitePartnerOverlay } from "@/components/app/invite-partner-overlay";
+import { PendingInviteManager } from "@/components/app/pending-invite-manager";
+import { useOnboarding } from "@/lib/onboarding/context";
 
 export function PartnerSection({
   role,
@@ -11,14 +13,18 @@ export function PartnerSection({
   activePartner,
   pendingPartner,
   partnerName,
+  inviteBaseUrl,
 }: {
   role: UserRole;
   displayName: string;
   activePartner: JourneyPartner | null;
   pendingPartner: JourneyPartner | null;
   partnerName?: string | null;
+  inviteBaseUrl: string;
 }) {
   const [showInvite, setShowInvite] = useState(false);
+  const { active, step } = useOnboarding();
+  const isHighlighted = active && step?.anchor === "[data-tour='invite-entry']";
 
   if (activePartner) {
     return (
@@ -33,14 +39,11 @@ export function PartnerSection({
   }
 
   if (pendingPartner) {
-    const waitingOn = pendingPartner.invited_name ?? "your invite";
     return (
-      <div className="flex items-center gap-3 bg-ink-light border border-parchment/10 rounded-xl px-4 py-3">
-        <Clock size={18} className="text-ink-muted flex-shrink-0" />
-        <p className="text-sm text-parchment-dim">
-          Waiting on <span className="font-medium text-parchment">{waitingOn}</span> to confirm.
-        </p>
-      </div>
+      <PendingInviteManager
+        pendingPartner={pendingPartner}
+        inviteBaseUrl={inviteBaseUrl}
+      />
     );
   }
 
@@ -49,16 +52,10 @@ export function PartnerSection({
       <button
         data-tour="invite-entry"
         onClick={() => setShowInvite(true)}
-        className="w-full flex items-center gap-3 bg-ink-light border border-parchment/10 rounded-xl px-4 py-3 hover:border-gold/30 transition-colors text-left"
+        className={`w-full flex items-center justify-center gap-2 bg-gold text-ink font-semibold py-3.5 rounded-full hover:bg-gold/90 transition-colors text-sm shadow-lg shadow-gold/20 ${isHighlighted ? "gold-ring-pulse" : ""}`}
       >
-        <Users size={18} className="text-gold flex-shrink-0" />
-        <p className="text-sm">
-          {role === "child" ? (
-            <span className="font-medium">Invite my Investment Partner</span>
-          ) : (
-            <span className="font-medium">Invite my child</span>
-          )}
-        </p>
+        <Users size={18} className="flex-shrink-0" />
+        {role === "child" ? "Invite my Investment Partner" : "Invite my child"}
       </button>
       {showInvite && (
         <InvitePartnerOverlay

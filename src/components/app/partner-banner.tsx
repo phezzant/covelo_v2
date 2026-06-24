@@ -1,9 +1,10 @@
+import Link from "next/link";
 import { Clock, CheckCircle2 } from "lucide-react";
 import type { JourneyPartner, UserRole } from "@/types/database";
 
 /**
- * Portfolio-tab status strip. Inviting now happens on the Profile tab, so this
- * only reflects partner status (active / pending) and renders nothing otherwise.
+ * Portfolio-tab status strip. Inviting / managing happens on the Profile tab,
+ * so this only reflects status and — when pending — links there.
  */
 export function PartnerBanner({
   activePartner,
@@ -31,13 +32,17 @@ export function PartnerBanner({
   if (pendingPartner) {
     const waitingOn = pendingPartner.invited_name ?? "your invite";
     return (
-      <div className="flex items-center gap-3 bg-ink-light border border-parchment/10 rounded-xl px-4 py-3">
+      <Link
+        href="/app/profile"
+        className="flex items-center gap-3 bg-ink-light border border-parchment/10 rounded-xl px-4 py-3 hover:border-gold/30 transition-colors"
+      >
         <Clock size={18} className="text-ink-muted flex-shrink-0" />
         <p className="text-sm text-parchment-dim">
-          Waiting on <span className="font-medium text-parchment">{waitingOn}</span> to confirm as
-          your Investment Partner.
+          Waiting on{" "}
+          <span className="font-medium text-parchment">{waitingOn}</span> to confirm —{" "}
+          <span className="text-gold underline underline-offset-2">manage invite</span>
         </p>
-      </div>
+      </Link>
     );
   }
 

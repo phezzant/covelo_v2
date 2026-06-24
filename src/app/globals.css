@@ -65,3 +65,15 @@ body {
     animation: none;
   }
 }
+
+/* Onboarding CTA highlight — pulsing gold ring */
+@keyframes gold-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(212, 162, 76, 0.5), 0 4px 14px 0 rgba(212, 162, 76, 0.15); }
+  50% { box-shadow: 0 0 0 6px rgba(212, 162, 76, 0.15), 0 4px 20px 0 rgba(212, 162, 76, 0.3); }
+}
+
+.gold-ring-pulse {
+  animation: gold-pulse 2s ease-in-out infinite;
+  outline: 2px solid var(--color-gold);
+  outline-offset: 3px;
+}

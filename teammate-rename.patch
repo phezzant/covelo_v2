@@ -1,0 +1,222 @@
+From 5cf6b6b8d33aa74dfc2ed3cbfe4d2d7a2e06f178 Mon Sep 17 00:00:00 2001
+From: Claude <claude@anthropic.com>
+Date: Wed, 24 Jun 2026 01:41:40 +0000
+Subject: [PATCH] =?UTF-8?q?rename:=20Investment=20Partner=20=E2=86=92=20te?=
+ =?UTF-8?q?ammate=20across=20all=20UI=20copy?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Settled product decision: the linked account counterpart is called
+'teammate' — not 'Investment Partner', 'journey partner', or 'co-pilot'.
+
+DB table journey_partner and all .from('journey_partner') references
+are unchanged — table rename requires a separate migration.
+Internal variable names (hasPartnerInvite, activePartner, etc.)
+are unchanged — purely infrastructure, not user-facing.
+---
+ README.md                                     | 4 ++--
+ src/app/app/compete/page.tsx                  | 4 ++--
+ src/app/app/profile/page.tsx                  | 4 ++--
+ src/app/page.tsx                              | 2 +-
+ src/app/signup/page.tsx                       | 2 +-
+ src/components/app/invite-partner-overlay.tsx | 8 ++++----
+ src/components/app/partner-banner.tsx         | 6 +++---
+ src/components/app/partner-section.tsx        | 6 +++---
+ src/lib/onboarding/steps.ts                   | 6 +++---
+ 9 files changed, 21 insertions(+), 21 deletions(-)
+
+diff --git a/README.md b/README.md
+index 7f69b7b..3071929 100644
+--- a/README.md
++++ b/README.md
+@@ -2,7 +2,7 @@
+ 
+ A click-through prototype of Covelo: landing page, signup/login, and a 4-tab
+ app (Portfolio, Research & Trade, Compete & Compare, Profile) with a guided
+-onboarding tutorial and a working Investment Partner invite flow.
++onboarding tutorial and a working Teammate invite flow.
+ 
+ Built with Next.js (App Router) + Supabase (Auth + Postgres), intended for
+ Vercel deployment.
+@@ -14,7 +14,7 @@ Vercel deployment.
+   tables with row-level security.
+ - **Market data** is fully static/hardcoded (32 fake instruments, prices
+   never move) — there's no live market data API in this prototype.
+-- **Investment Partner invites** are simulated in-app, not real email. When
++- **Teammate invites** are simulated in-app, not real email. When
+   you invite someone, the invite is stored as a `pending` row; it resolves
+   to `active` automatically when someone signs up using the matching email
+   address (see "How invites resolve" below). No email is actually sent.
+diff --git a/src/app/app/compete/page.tsx b/src/app/app/compete/page.tsx
+index 34d131b..3dbb3dd 100644
+--- a/src/app/app/compete/page.tsx
++++ b/src/app/app/compete/page.tsx
+@@ -36,7 +36,7 @@ export default async function CompetePage() {
+           <p className="font-display text-xl mb-2">Competing is locked for now</p>
+           <p className="text-parchment-dim text-sm max-w-sm">
+             {profile.role === "child"
+-              ? "Invite your Investment Partner from the Profile tab to unlock competing and comparing."
++              ? "Invite your teammate from the Profile tab to unlock competing and comparing."
+               : "Invite your child from the Profile tab — once they're linked, you can compete together."}
+           </p>
+         </div>
+@@ -82,7 +82,7 @@ export default async function CompetePage() {
+         </div>
+         <div className="bg-ink-light border border-parchment/10 rounded-2xl p-5 text-center">
+           <span className="text-2xl block mb-2">{partnerProfile?.avatar_emoji ?? "🧑"}</span>
+-          <p className="text-xs text-ink-muted mb-1">{partnerProfile?.display_name ?? "Partner"}</p>
++          <p className="text-xs text-ink-muted mb-1">{partnerProfile?.display_name ?? "Teammate"}</p>
+           <p className="font-mono text-lg">{formatCurrency(partnerValue)}</p>
+         </div>
+       </div>
+diff --git a/src/app/app/profile/page.tsx b/src/app/app/profile/page.tsx
+index 4c53994..7f2c1a9 100644
+--- a/src/app/app/profile/page.tsx
++++ b/src/app/app/profile/page.tsx
+@@ -14,11 +14,11 @@ export default async function ProfilePage() {
+ 
+       <h1 className="font-display text-3xl mb-1">My Profile</h1>
+       <p className="text-parchment-dim text-sm mb-8">
+-        Manage your Investment Partner and account.
++        Manage your teammate and account.
+       </p>
+ 
+       <p className="font-mono text-xs uppercase tracking-[0.15em] text-gold mb-3">
+-        Investment Partner
++        Teammate
+       </p>
+       <PartnerSection
+         role={profile.role}
+diff --git a/src/app/page.tsx b/src/app/page.tsx
+index 08bdd5b..838830e 100644
+--- a/src/app/page.tsx
++++ b/src/app/page.tsx
+@@ -32,7 +32,7 @@ export default function LandingPage() {
+           <span className="italic text-parchment-dim">together.</span>
+         </h1>
+         <p className="text-lg text-parchment-dim max-w-xl mb-10 leading-relaxed">
+-          Covelo pairs a child with an Investment Partner — a parent, grandparent,
++          Covelo pairs a child with a teammate — a parent, grandparent,
+           or mentor — for a real paper-trading game built on real markets. No
+           lectures. Just a shared portfolio, and a reason to talk about money.
+         </p>
+diff --git a/src/app/signup/page.tsx b/src/app/signup/page.tsx
+index 6bb2d2c..8c61d60 100644
+--- a/src/app/signup/page.tsx
++++ b/src/app/signup/page.tsx
+@@ -72,7 +72,7 @@ export default function SignupPage() {
+     return (
+       <AuthShell
+         title="Welcome to Covelo"
+-        subtitle="Covelo is a game where you learn to invest in real companies using practice money — alongside an Investment Partner you trust, like a parent or your child."
++        subtitle="Covelo is a game where you learn to invest in real companies using practice money — alongside a teammate you trust, like a parent or your child."
+       >
+         <div className="bg-ink-light border border-parchment/10 rounded-2xl p-5 mb-6">
+           <p className="text-sm text-parchment-dim leading-relaxed">
+diff --git a/src/components/app/invite-partner-overlay.tsx b/src/components/app/invite-partner-overlay.tsx
+index 2da1525..8620d64 100644
+--- a/src/components/app/invite-partner-overlay.tsx
++++ b/src/components/app/invite-partner-overlay.tsx
+@@ -101,13 +101,13 @@ export function InvitePartnerOverlay({
+   }
+ 
+   return (
+-    <Overlay onClose={onClose} title="Invite your Investment Partner">
++    <Overlay onClose={onClose} title="Invite your teammate">
+       <h2 className="font-display text-2xl mb-1">
+-        {isChild ? "Invite your Investment Partner" : "Invite your child"}
++        {isChild ? "Invite your teammate" : "Invite your child"}
+       </h2>
+       <p className="text-parchment-dim text-sm mb-6">
+         {isChild
+-          ? "Who will be your Investment Partner? They need to be 18 or older — Mum, Dad, or another grown-up you trust is usually the best choice."
++          ? "Who will be your teammate? They need to be 18 or older — Mum, Dad, or another grown-up you trust is usually the best choice."
+           : `${ownName || "You"}, who's the child you'd like to bring along on Covelo?`}
+       </p>
+       {error && (
+@@ -147,7 +147,7 @@ export function InvitePartnerOverlay({
+         />
+         <div className="mt-6">
+           <PrimaryButton type="submit" loading={loading}>
+-            {isChild ? "Invite my Investment Partner" : "Send invite"}
++            {isChild ? "Invite my teammate" : "Send invite"}
+           </PrimaryButton>
+         </div>
+       </form>
+diff --git a/src/components/app/partner-banner.tsx b/src/components/app/partner-banner.tsx
+index 2161e8c..18eb68a 100644
+--- a/src/components/app/partner-banner.tsx
++++ b/src/components/app/partner-banner.tsx
+@@ -21,8 +21,8 @@ export function PartnerBanner({
+       <div className="flex items-center gap-3 bg-gold/10 border border-gold/25 rounded-xl px-4 py-3">
+         <CheckCircle2 size={18} className="text-gold flex-shrink-0" />
+         <p className="text-sm">
+-          <span className="font-medium">{partnerName ?? "Your Investment Partner"}</span> is your
+-          Investment Partner. Compete &amp; Compare is unlocked.
++          <span className="font-medium">{partnerName ?? "Your teammate"}</span> is your
++          teammate. Compete &amp; Compare is unlocked.
+         </p>
+       </div>
+     );
+@@ -35,7 +35,7 @@ export function PartnerBanner({
+         <Clock size={18} className="text-ink-muted flex-shrink-0" />
+         <p className="text-sm text-parchment-dim">
+           Waiting on <span className="font-medium text-parchment">{waitingOn}</span> to confirm as
+-          your Investment Partner.
++          your teammate.
+         </p>
+       </div>
+     );
+diff --git a/src/components/app/partner-section.tsx b/src/components/app/partner-section.tsx
+index 2a2bff6..9c9b021 100644
+--- a/src/components/app/partner-section.tsx
++++ b/src/components/app/partner-section.tsx
+@@ -25,8 +25,8 @@ export function PartnerSection({
+       <div className="flex items-center gap-3 bg-gold/10 border border-gold/25 rounded-xl px-4 py-3">
+         <CheckCircle2 size={18} className="text-gold flex-shrink-0" />
+         <p className="text-sm">
+-          <span className="font-medium">{partnerName ?? "Your Investment Partner"}</span> is your
+-          Investment Partner. Compete &amp; Compare is unlocked.
++          <span className="font-medium">{partnerName ?? "Your teammate"}</span> is your
++          teammate. Compete &amp; Compare is unlocked.
+         </p>
+       </div>
+     );
+@@ -54,7 +54,7 @@ export function PartnerSection({
+         <Users size={18} className="text-gold flex-shrink-0" />
+         <p className="text-sm">
+           {role === "child" ? (
+-            <span className="font-medium">Invite my Investment Partner</span>
++            <span className="font-medium">Invite my teammate</span>
+           ) : (
+             <span className="font-medium">Invite my child</span>
+           )}
+diff --git a/src/lib/onboarding/steps.ts b/src/lib/onboarding/steps.ts
+index 8bcf450..857e446 100644
+--- a/src/lib/onboarding/steps.ts
++++ b/src/lib/onboarding/steps.ts
+@@ -90,9 +90,9 @@ const CHILD_STEPS: OnboardingStep[] = [
+   {
+     id: 6,
+     tab: "profile",
+-    title: "Invite your Investment Partner",
++    title: "Invite your teammate",
+     body:
+-      "Your Investment Partner is a special player — someone you compete with, but also an ally " +
++      "Your teammate is a special player — someone you compete with, but also an ally " +
+       "you work with to take on others. It's an important choice: they need to be 18 or older, " +
+       "and ideally someone with a bit of experience. Mum or Dad is usually a great pick.",
+     requiredAction: "send-invite",
+@@ -105,7 +105,7 @@ const CHILD_STEPS: OnboardingStep[] = [
+     tab: "portfolio",
+     title: "You're all set",
+     body:
+-      "You've bought your first stock, set up your profile, and invited your Investment Partner. " +
++      "You've bought your first stock, set up your profile, and invited your teammate. " +
+       "When they join, Compete & Compare unlocks for both of you. Welcome to Covelo!",
+     requiredAction: "continue",
+     showContinue: true,
+-- 
+2.43.0
+

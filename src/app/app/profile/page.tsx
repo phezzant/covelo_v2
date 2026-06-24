@@ -3,10 +3,18 @@ import { PartnerSection } from "@/components/app/partner-section";
 import { LogoutButton } from "@/components/app/logout-button";
 import { RestartTourButton } from "@/components/app/restart-tour-button";
 import { OnboardingBanner } from "@/components/app/onboarding-banner";
+import { headers } from "next/headers";
 
 export default async function ProfilePage() {
   const { profile, activePartner, pendingPartner, partnerProfile } =
     await getCurrentUserContext();
+
+  // Derive the base URL from the request headers so this works on
+  // localhost, staging, and production without env-var gymnastics.
+  const headersList = await headers();
+  const host = headersList.get("host") ?? "covelo.co";
+  const proto = host.startsWith("localhost") ? "http" : "https";
+  const inviteBaseUrl = `${proto}://${host}`;
 
   return (
     <main className="max-w-3xl mx-auto px-4 sm:px-6 py-6">
@@ -26,6 +34,7 @@ export default async function ProfilePage() {
         activePartner={activePartner}
         pendingPartner={pendingPartner}
         partnerName={partnerProfile?.display_name}
+        inviteBaseUrl={inviteBaseUrl}
       />
 
       <div className="mt-10 pt-6 border-t border-parchment/10">

@@ -44,7 +44,7 @@ export function OnboardingTour() {
         setRect(el.getBoundingClientRect());
         setAnchorMissing(false);
         if (missingTimer.current) clearTimeout(missingTimer.current);
-      } else if (polls < 60) {
+      } else if (polls < 300) {
         polls += 1;
         raf = requestAnimationFrame(measure);
       }
